@@ -2,18 +2,17 @@ from flask import Flask, request
 import json
 import boto3
 import time
+
+
 app = Flask(__name__)
-
-
-most_recent_value = 0
-
-s3 = boto3.client('s3')
+s3_client = boto3.client('s3')
+s3_resource = boto3.resource('s3')
 
 
 def upload_file_to_s3(file):
     timer = time.time()
     try:
-        s3.upload_fileobj(
+        s3_client.upload_fileobj(
             file,
             'cc-proj',
             str(int(timer)) + '.jpeg',
@@ -28,23 +27,15 @@ def upload_file_to_s3(file):
 def upload_file():
     try:
         imagefile = request.files.get('imagefile', '')
-        upload_file_to_s3(imagefile)
-        return 'true'
+        return upload_file_to_s3(imagefile)
     except Exception as err:
         print(err)
-
-
-@app.route("/", methods=['POST'])
-def store():
-    global most_recent_value
-    most_recent_value = request.json
-    return json.dumps(True)
+        return json.dumps({'error': 'Server Error'}), 500
 
 
 @app.route("/", methods=['GET'])
 def hello():
-    global most_recent_value
-    return json.dumps(most_recent_value)
+    return json.dumps(list(map(lambda obj: obj.key, list(s3_resource.Bucket('cc-proj').objects.iterator()))))
 
 
 if __name__ == "__main__":
