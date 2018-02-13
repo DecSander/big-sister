@@ -9,7 +9,6 @@ import warnings
 # YOLO
 warnings.filterwarnings("ignore")
 
-from matplotlib import pyplot as plt
 from PIL import Image
 sys.path.append("models/research")
 from object_detection.utils import ops as utils_ops
@@ -133,9 +132,6 @@ def count_people(img, humanity_threshold=0.35):
       instance_masks=output_dict.get('detection_masks'),
       use_normalized_coordinates=True,
       line_thickness=8)
-  plt.figure(figsize=IMAGE_SIZE)
-  plt.imshow(image_np)
-  plt.savefig("detected_" + os.path.basename(img if type(img) == str else img.name))
 
   num_humans = 0
   for object_id, probability in zip(output_dict['detection_classes'], output_dict['detection_scores']):
