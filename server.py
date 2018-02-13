@@ -4,11 +4,14 @@ import boto3
 import time
 from crowd_counter import count_people
 import traceback
+import os
 
 
 app = Flask(__name__)
 s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
+MB_TO_BYTES = 1024 * 1024
+MAX_MB = 2
 
 
 def upload_file_to_s3(file):
@@ -25,9 +28,21 @@ def upload_file_to_s3(file):
 @app.route('/', methods=['POST'])
 def upload_file():
     try:
-        imagefile = request.files.get('imagefile', '')
-        # upload_file_to_s3(imagefile)
-        return json.dumps(count_people(imagefile))
+        imagefile = request.files.get('imagefile', None)
+        if imagefile is None:
+            return json.dumps({'error': 'Image file was not supplied'}), 400
+        elif imagefile.content_type != 'image/jpeg':
+            return json.dumps({'error': 'Image supplied must be a jpeg, you supplied {}'.format(imagefile.content_type)}), 400
+        else:
+            imagefile.seek(0, os.SEEK_END)
+            size = imagefile.tell()
+            imagefile.seek(0)
+
+            if size > MAX_MB * MB_TO_BYTES:
+                return json.dumps({'error': 'Image supplied was too large, must be less than {} MB'.format(MAX_MB)})
+            else:
+                # upload_file_to_s3(imagefile)
+                return json.dumps(count_people(imagefile))
     except Exception:
         traceback.print_exc()
         return json.dumps({'error': 'Server Error'}), 500
