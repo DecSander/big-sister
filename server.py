@@ -28,7 +28,7 @@ def upload_file():
         imagefile = request.files.get('imagefile', '')
         # upload_file_to_s3(imagefile)
         return json.dumps(count_people(imagefile))
-    except Exception as err:
+    except Exception:
         traceback.print_exc()
         return json.dumps({'error': 'Server Error'}), 500
 
