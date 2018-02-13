@@ -26,7 +26,7 @@ def upload_file_to_s3(file):
 def upload_file():
     try:
         imagefile = request.files.get('imagefile', '')
-        print "FILE: ", type(imagefile)
+        # upload_file_to_s3(imagefile)
         return json.dumps(count_people(imagefile))
     except Exception as err:
         traceback.print_exc()
@@ -42,7 +42,7 @@ def pictures():
 
 @app.route("/servers", methods=['GET'])
 def servers():
-    return json.dumps(['18.221.18.72'])
+    return json.dumps([])
 
 
 if __name__ == "__main__":

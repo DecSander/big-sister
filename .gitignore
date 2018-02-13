@@ -1,2 +1,4 @@
 *.pyc
 ssd_mobilenet*
+*.JPEG
+*.jpg
