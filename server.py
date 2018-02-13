@@ -31,10 +31,15 @@ def upload_file():
 
 
 @app.route("/", methods=['GET'])
-def hello():
+def pictures():
     bucket_iterator = s3_resource.Bucket('cc-proj').objects.iterator()
     files = [obj.key for obj in bucket_iterator]
     return json.dumps(files)
+
+
+@app.route("/servers", methods=['GET'])
+def servers():
+    return json.dumps(['18.221.18.72'])
 
 
 if __name__ == "__main__":
