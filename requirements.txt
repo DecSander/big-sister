@@ -1,0 +1,4 @@
+Flask==0.12.2
+tensorflow==1.5.0
+boto3==1.5.26
+matplotlib==2.1.2
