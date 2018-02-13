@@ -11,23 +11,20 @@ s3_resource = boto3.resource('s3')
 
 def upload_file_to_s3(file):
     timer = time.time()
-    try:
-        s3_client.upload_fileobj(
-            file,
-            'cc-proj',
-            str(int(timer)) + '.jpeg',
-            ExtraArgs={"ContentType": file.content_type}
-        )
-        return "{}".format(timer)
-    except Exception as e:
-        print("Something Happened: ", e)
+    s3_client.upload_fileobj(
+        file,
+        'cc-proj',
+        str(int(timer)) + '.jpeg',
+        ExtraArgs={"ContentType": file.content_type}
+    )
+    return "{}".format(timer)
 
 
 @app.route('/', methods=['POST'])
 def upload_file():
     try:
         imagefile = request.files.get('imagefile', '')
-        return upload_file_to_s3(imagefile)
+        return json.dumps(upload_file_to_s3(imagefile))
     except Exception as err:
         print(err)
         return json.dumps({'error': 'Server Error'}), 500
@@ -35,7 +32,9 @@ def upload_file():
 
 @app.route("/", methods=['GET'])
 def hello():
-    return json.dumps(list(map(lambda obj: obj.key, list(s3_resource.Bucket('cc-proj').objects.iterator()))))
+    bucket_iterator = s3_resource.Bucket('cc-proj').objects.iterator()
+    files = [obj.key for obj in bucket_iterator]
+    return json.dumps(files)
 
 
 if __name__ == "__main__":
