@@ -9,20 +9,21 @@ import warnings
 # YOLO
 warnings.filterwarnings("ignore")
 
+ROOT_DIR = os.path.dirname(__file__)
+
 from PIL import Image
-sys.path.append("models/research")
+sys.path.append(ROOT_DIR)
 from object_detection.utils import ops as utils_ops
 
 if tf.__version__ < '1.4.0':
   raise ImportError('Please upgrade your tensorflow installation to v1.4.* or later!')
 
-from object_detection.utils import label_map_util
 
+from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
 
 
 # What model to download.
-ROOT_DIR = os.path.dirname(__file__)
 MODEL_NAME = 'ssd_mobilenet_v1_coco_2017_11_17'
 MODEL_FILE = MODEL_NAME + '.tar.gz'
 DOWNLOAD_BASE = 'http://download.tensorflow.org/models/object_detection/'

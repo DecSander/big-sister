@@ -2,6 +2,8 @@ from flask import Flask, request
 import json
 import boto3
 import time
+from crowd_counter import count_people
+import traceback
 
 
 app = Flask(__name__)
@@ -24,9 +26,10 @@ def upload_file_to_s3(file):
 def upload_file():
     try:
         imagefile = request.files.get('imagefile', '')
-        return json.dumps(upload_file_to_s3(imagefile))
+        print "FILE: ", type(imagefile)
+        return json.dumps(count_people(imagefile))
     except Exception as err:
-        print(err)
+        traceback.print_exc()
         return json.dumps({'error': 'Server Error'}), 500
 
 
