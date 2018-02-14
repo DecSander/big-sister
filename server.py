@@ -27,12 +27,15 @@ def merge_dicts(x, y):
 def bootup():
     for server in servers:
         if MY_IP != server:
-            result = requests.get('http://{}:5000/current_counts'.format(server), timeout=3)
-            if result.status_code == 200:
-                global most_recent_counts
-                most_recent_counts = merge_dicts(most_recent_counts, json.loads(result.text))
-            else:
-                print result.json()
+            try:
+                result = requests.get('http://{}:5000/current_counts'.format(server), timeout=3)
+                if result.status_code == 200:
+                    global most_recent_counts
+                    most_recent_counts = merge_dicts(most_recent_counts, json.loads(result.text))
+                else:
+                    print result.json()
+            except requests.exceptions.ConnectionError:
+                pass
 
 
 def upload_file_to_s3(file):
