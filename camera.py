@@ -13,7 +13,7 @@ def send_image(pic, f):
 
 
 def get_urls():
-    result = requests.get(SERVER_URL + '/servers', timeout=3)
+    result = requests.get(SERVER_URL + '/servers', timeout=10)
     global server_urls
     server_urls = json.loads(result.text)
 
