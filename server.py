@@ -1,119 +1,12 @@
 from flask import Flask, request, jsonify
-import boto3
-import time
 from crowd_counter import count_people
 import traceback
 import os
-import requests
-import json
-import sqlite3
-
+from utility import temp_store, persist, is_number, send_to_other_servers, bootup
+from const import MAX_MB, MB_TO_BYTES
 
 app = Flask(__name__)
-s3_client = boto3.client('s3')
-s3_resource = boto3.resource('s3')
-MB_TO_BYTES = 1024 * 1024
-MAX_MB = 2
-MY_IP = os.environ['STATIC_IP'] if 'STATIC_IP' in os.environ else None
-servers = ['18.218.132.215', '18.221.18.72']
 most_recent_counts = {}
-
-
-def setup_db():
-    conn = sqlite3.connect('counts.db')
-    c = conn.cursor()
-    c.execute('CREATE TABLE IF NOT EXISTS camera_counts (camera_id INTEGER UNIQUE, camera_count INTEGER, photo_time REAL);')
-    conn.commit()
-
-    c = conn.cursor()
-    c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts;')
-    rows = c.fetchall()
-    for row in rows:
-        camera_id = row[0]
-        camera_count = row[1]
-        photo_time = row[2]
-        most_recent_counts[camera_id] = {'camera_count': camera_count, 'photo_time': photo_time}
-    conn.close()
-
-
-def temp_store(camera_id, camera_count, photo_time):
-    should_update = ('camera_id' not in most_recent_counts) or (most_recent_counts['camera_id'] < photo_time)
-    if should_update:
-        most_recent_counts[camera_id] = {
-            'camera_count': camera_count,
-            'photo_time': photo_time
-        }
-    return should_update
-
-
-def persist(camera_id, camera_count, photo_time):
-    conn = sqlite3.connect('counts.db')
-    c = conn.cursor()
-    try:
-        c.execute('INSERT INTO camera_counts values (?, ?, ?);', (camera_id, camera_count, photo_time))
-        conn.commit()
-    except sqlite3.IntegrityError:
-        c.execute('UPDATE camera_counts SET camera_count = ?, photo_time = ?;', (camera_count, photo_time))
-        conn.commit()
-    conn.close()
-
-
-def is_number(v):
-    try:
-        float(v)
-        return True
-    except ValueError:
-        return False
-
-
-def merge_dicts(x, y):
-    for k in y:
-        if (k not in x) or (k in x and y[k]['photo_time'] > x[k]['photo_time']):
-            x[k] = y[k]
-
-
-def bootup():
-    setup_db()
-
-    for server in servers:
-        if MY_IP != server:
-            try:
-                result = requests.get('http://{}:5000/current_counts'.format(server), timeout=3)
-                if result.status_code == 200:
-                    global most_recent_counts
-                    most_recent_counts = merge_dicts(most_recent_counts, json.loads(result.text))
-                else:
-                    print result.json()
-            except requests.exceptions.ConnectionError:
-                print('Failed to retrieve counts from {}'.format(server))
-
-
-def upload_file_to_s3(file):
-    timer = time.time()
-    s3_client.upload_fileobj(
-        file,
-        'cc-proj',
-        str(int(timer)) + '.jpeg',
-        ExtraArgs={"ContentType": file.content_type}
-    )
-    return "{}.jpeg".format(int(timer))
-
-
-def send_to_other_servers(camera_id, camera_count, photo_time):
-    for server in servers:
-        if MY_IP != server:
-            try:
-                result = requests.post('http://{}:5000/update_camera'.format(server),
-                                       timeout=3,
-                                       json={
-                                       'camera_id': camera_id,
-                                       'camera_count': camera_count,
-                                       'photo_time': photo_time
-                                       })
-                if result.status_code != 200:
-                    print result.json()
-            except requests.exceptions.ConnectionError:
-                print('Failed to send count to {}'.format(server))
 
 
 @app.route('/update_camera', methods=['POST'])
@@ -130,7 +23,7 @@ def update_camera_value():
         camera_count = json_values['camera_count']
         photo_time = json_values['photo_time']
 
-        if temp_store(camera_id, camera_count, photo_time):
+        if temp_store(most_recent_counts, camera_id, camera_count, photo_time):
             persist(camera_id, camera_count, photo_time)
         return jsonify(True)
 
@@ -185,5 +78,5 @@ def current_data():
 
 
 if __name__ == "__main__":
-    bootup()
+    bootup(most_recent_counts)
     app.run(host='0.0.0.0')
