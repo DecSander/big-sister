@@ -31,6 +31,7 @@ def upload_file_to_s3(file):
 def send_to_other_servers(camera_id, camera_count):
     for server in servers:
         if MY_IP != server:
+            print(server)
             result = requests.post('http://{}:5000/update_camera'.format(server), timeout=3, json={'camera_id': camera_id, 'camera_count': camera_count})
             if result.status_code != 200:
                 print result.json()
