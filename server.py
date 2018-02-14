@@ -89,7 +89,7 @@ def pictures():
 
 
 @app.route("/servers", methods=['GET'])
-def servers():
+def server_list():
     return jsonify([])
 
 
