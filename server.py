@@ -5,6 +5,7 @@ from crowd_counter import count_people
 import traceback
 import os
 import requests
+import json
 
 
 app = Flask(__name__)
@@ -17,8 +18,21 @@ servers = ['18.218.132.215', '18.221.18.72']
 most_recent_counts = {}
 
 
+def merge_dicts(x, y):
+    z = x.copy()
+    z.update(y)
+    return z
+
+
 def bootup():
-    pass
+    for server in servers:
+        if MY_IP != server:
+            result = requests.get('http://{}:5000/current_counts'.format(server), timeout=3)
+            if result.status_code == 200:
+                global most_recent_counts
+                most_recent_counts = merge_dicts(most_recent_counts, json.loads(result.text))
+            else:
+                print result.json()
 
 
 def upload_file_to_s3(file):
@@ -35,7 +49,7 @@ def upload_file_to_s3(file):
 def send_to_other_servers(camera_id, camera_count):
     for server in servers:
         if MY_IP != server:
-            result = requests.post('http://{}:5000/update_camera'.format(server), timeout=5, json={'camera_id': camera_id, 'camera_count': camera_count})
+            result = requests.post('http://{}:5000/update_camera'.format(server), timeout=3, json={'camera_id': camera_id, 'camera_count': camera_count})
             if result.status_code != 200:
                 print result.json()
 
@@ -100,9 +114,9 @@ def pictures():
     return jsonify(files)
 
 
-@app.route("/servers", methods=['GET'])
-def server_list():
-    return jsonify([])
+@app.route("/current_counts", methods=['GET'])
+def current_data():
+    return jsonify(most_recent_counts)
 
 
 if __name__ == "__main__":
