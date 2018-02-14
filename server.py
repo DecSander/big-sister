@@ -17,6 +17,10 @@ servers = ['18.218.132.215', '18.221.18.72']
 most_recent_counts = {}
 
 
+def bootup():
+    pass
+
+
 def upload_file_to_s3(file):
     timer = time.time()
     s3_client.upload_fileobj(
@@ -60,6 +64,11 @@ def upload_file():
     try:
         imagefile = request.files.get('imagefile', None)
         camera_id = request.form.get('camera_id', None)
+        try:
+            camera_id = int(camera_id)
+        except ValueError:
+            return jsonify({'error': 'Camera ID supplied was not a number'})
+
         if imagefile is None:
             return jsonify({'error': 'Image file was not supplied'}), 400
         elif imagefile.content_type != 'image/jpeg':
@@ -76,7 +85,6 @@ def upload_file():
             else:
                 # upload_file_to_s3(imagefile)
                 camera_count = count_people(imagefile)
-                camera_id = 0
                 most_recent_counts[camera_id] = camera_count
                 send_to_other_servers(camera_id, camera_count)
                 return jsonify(camera_count)
@@ -98,4 +106,5 @@ def server_list():
 
 
 if __name__ == "__main__":
+    bootup()
     app.run(host='0.0.0.0')
