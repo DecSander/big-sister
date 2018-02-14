@@ -12,6 +12,7 @@ s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
 MB_TO_BYTES = 1024 * 1024
 MAX_MB = 2
+MY_IP = '18.221.18.72'
 servers = ['18.218.132.215', '18.221.18.72']
 most_recent_counts = {}
 
@@ -29,7 +30,8 @@ def upload_file_to_s3(file):
 
 def send_to_other_servers(camera_id, camera_count):
     for server in servers:
-        requests.post('http://{}/update_camera'.format(server), timeout=3, data={'id': camera_id, 'count': camera_count})
+        if MY_IP != server:
+            requests.post('http://{}:5000/update_camera'.format(server), timeout=3, data={'id': camera_id, 'count': camera_count})
 
 
 @app.route('/update_camera', methods=['POST'])
