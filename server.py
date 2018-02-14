@@ -29,7 +29,7 @@ def upload_file_to_s3(file):
 
 def send_to_other_servers(camera_id, camera_count):
     for server in servers:
-        requests.post(server + '/update_camera', timeout=3, data={'id': camera_id, 'count': camera_count})
+        requests.post('http://{}/update_camera'.format(server), timeout=3, data={'id': camera_id, 'count': camera_count})
 
 
 @app.route('/update_camera', methods=['POST'])
