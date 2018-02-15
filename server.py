@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import traceback
 import os
 import threading
-from utility import temp_store, persist, is_number, bootup, resize_image, process_image
+from utility import temp_store, persist, is_number, bootup, resize_image, process_image, upload_file_to_s3
 from const import MAX_MB, MB_TO_BYTES
 
 app = Flask(__name__)
