@@ -1,9 +1,9 @@
 import boto3
 import sqlite3
 import requests
-import time
+from PIL import Image
 import json
-from const import servers, MY_IP
+from const import servers, MY_IP, basewidth
 from crowd_counter import count_people
 
 s3_client = boto3.client('s3')
@@ -78,15 +78,6 @@ def bootup(counts):
                 print('Failed to retrieve counts from {}'.format(server))
 
 
-def upload_file_to_s3(file, camera_id, photo_time):
-    s3_client.upload_fileobj(
-        file,
-        'cc-proj',
-        '{}_{}.jpeg'.format(camera_id, int(photo_time * 1000)),
-        ExtraArgs={"ContentType": 'image/jpeg'}
-    )
-
-
 def send_to_other_servers(camera_id, camera_count, photo_time):
     for server in servers:
         if MY_IP != server:
@@ -104,10 +95,25 @@ def send_to_other_servers(camera_id, camera_count, photo_time):
                 print('Failed to send count to {}'.format(server))
 
 
-def process_image(counts, resized, image_file, camera_id, photo_time, most_recent_counts):
+def resize_image(imagefile):
+    image = Image.open(imagefile)
+    wpercent = basewidth / float(image.size[0])
+    hsize = int((float(image.size[1]) * float(wpercent)))
+    return image.resize((basewidth, hsize), Image.ANTIALIAS)
+
+
+def process_image(counts, resized, camera_id, photo_time):
         camera_count = count_people(resized)
-        # upload_file_to_s3(image_file)
 
         if temp_store(counts, camera_id, camera_count, photo_time):
             persist(camera_id, camera_count, photo_time)
             send_to_other_servers(camera_id, camera_count, photo_time)
+
+
+def upload_file_to_s3(file, camera_id, photo_time):
+    s3_client.upload_fileobj(
+        file,
+        'cc-proj',
+        '{}_{}.jpeg'.format(camera_id, int(photo_time * 1000)),
+        ExtraArgs={"ContentType": 'image/jpeg'}
+    )

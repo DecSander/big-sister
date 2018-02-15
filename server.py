@@ -2,13 +2,11 @@ from flask import Flask, request, jsonify
 import traceback
 import os
 import threading
-from utility import temp_store, persist, is_number, bootup, process_image
+from utility import temp_store, persist, is_number, bootup, resize_image, process_image
 from const import MAX_MB, MB_TO_BYTES
-from PIL import Image
 
 app = Flask(__name__)
 most_recent_counts = {}
-basewidth = 1000
 
 
 @app.route('/update_camera', methods=['POST'])
@@ -59,16 +57,17 @@ def upload_file():
         if filesize > MAX_MB * MB_TO_BYTES:
             return jsonify({'error': 'Image supplied was too large, must be less than {} MB'.format(MAX_MB)})
 
-        resized = Image.open(imagefile)
-        wpercent = basewidth / float(resized.size[0])
-        hsize = int((float(resized.size[1]) * float(wpercent)))
-        resized = resized.resize((basewidth, hsize), Image.ANTIALIAS)
+        resized = resize_image(imagefile)
 
         camera_id = int(camera_id)
         photo_time = float(photo_time)
 
-        t = threading.Thread(target=process_image, args=(most_recent_counts, resized, imagefile, camera_id, photo_time, most_recent_counts))
-        t.start()
+        cv_thread = threading.Thread(target=process_image, args=(most_recent_counts, resized, camera_id, photo_time))
+        storage_thread = threading.Thread(target=upload_file_to_s3, args=(imagefile, camera_id, photo_time))
+
+        cv_thread.start()
+        # storage_thread.start()
+
         return jsonify(True)
 
     except Exception:
