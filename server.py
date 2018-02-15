@@ -1,12 +1,14 @@
 from flask import Flask, request, jsonify
-from crowd_counter import count_people
 import traceback
 import os
-from utility import temp_store, persist, is_number, send_to_other_servers, bootup
+import threading
+from utility import temp_store, persist, is_number, bootup, process_image
 from const import MAX_MB, MB_TO_BYTES
+from PIL import Image
 
 app = Flask(__name__)
 most_recent_counts = {}
+size = 1000, 1000
 
 
 @app.route('/update_camera', methods=['POST'])
@@ -52,20 +54,19 @@ def upload_file():
 
         # Check file length
         imagefile.seek(0, os.SEEK_END)
-        size = imagefile.tell()
+        filesize = imagefile.tell()
         imagefile.seek(0)
-        if size > MAX_MB * MB_TO_BYTES:
+        if filesize > MAX_MB * MB_TO_BYTES:
             return jsonify({'error': 'Image supplied was too large, must be less than {} MB'.format(MAX_MB)})
 
-        # upload_file_to_s3(imagefile)
+        resized = Image.open(imagefile)
+        resized.thumbnail(size, Image.ANTIALIAS)
         camera_id = int(camera_id)
         photo_time = float(photo_time)
-        camera_count = count_people(imagefile)
 
-        if temp_store(camera_id, camera_count, photo_time):
-            persist(camera_id, camera_count, photo_time)
-            send_to_other_servers(camera_id, camera_count, photo_time)
-        return jsonify(camera_count)
+        t = threading.Thread(target=process_image, args=(most_recent_counts, resized, imagefile, camera_id, photo_time, most_recent_counts))
+        t.start()
+        return jsonify(True)
 
     except Exception:
         traceback.print_exc()

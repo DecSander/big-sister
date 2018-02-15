@@ -4,6 +4,7 @@ import requests
 import time
 import json
 from const import servers, MY_IP
+from crowd_counter import count_people
 
 s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
@@ -77,15 +78,13 @@ def bootup(counts):
                 print('Failed to retrieve counts from {}'.format(server))
 
 
-def upload_file_to_s3(file):
-    timer = time.time()
+def upload_file_to_s3(file, camera_id, photo_time):
     s3_client.upload_fileobj(
         file,
         'cc-proj',
-        str(int(timer)) + '.jpeg',
-        ExtraArgs={"ContentType": file.content_type}
+        '{}_{}.jpeg'.format(camera_id, int(photo_time * 1000)),
+        ExtraArgs={"ContentType": 'image/jpeg'}
     )
-    return "{}.jpeg".format(int(timer))
 
 
 def send_to_other_servers(camera_id, camera_count, photo_time):
@@ -103,3 +102,12 @@ def send_to_other_servers(camera_id, camera_count, photo_time):
                     print result.json()
             except requests.exceptions.ConnectionError:
                 print('Failed to send count to {}'.format(server))
+
+
+def process_image(counts, resized, image_file, camera_id, photo_time, most_recent_counts):
+        camera_count = count_people(resized)
+        # upload_file_to_s3(image_file)
+
+        if temp_store(counts, camera_id, camera_count, photo_time):
+            persist(camera_id, camera_count, photo_time)
+            send_to_other_servers(camera_id, camera_count, photo_time)
