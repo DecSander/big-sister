@@ -117,8 +117,7 @@ def run_inference_for_single_image(image, graph):
   return output_dict
 
 
-def count_people(img, humanity_threshold=0.35):
-  image = Image.open(img)
+def count_people(image, humanity_threshold=0.35):
   # the array based representation of the image will be used later in order to prepare the
   # result image with boxes and labels on it.
   image_np = load_image_into_numpy_array(image)

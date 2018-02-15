@@ -8,7 +8,7 @@ from PIL import Image
 
 app = Flask(__name__)
 most_recent_counts = {}
-size = 1000, 1000
+basewidth = 1000
 
 
 @app.route('/update_camera', methods=['POST'])
@@ -60,7 +60,10 @@ def upload_file():
             return jsonify({'error': 'Image supplied was too large, must be less than {} MB'.format(MAX_MB)})
 
         resized = Image.open(imagefile)
-        resized.thumbnail(size, Image.ANTIALIAS)
+        wpercent = basewidth / float(resized.size[0])
+        hsize = int((float(resized.size[1]) * float(wpercent)))
+        resized = resized.resize((basewidth, hsize), Image.ANTIALIAS)
+
         camera_id = int(camera_id)
         photo_time = float(photo_time)
 
