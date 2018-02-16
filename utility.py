@@ -4,9 +4,11 @@ import requests
 from PIL import Image
 import json
 import re
+import logging
 from const import MY_IP, basewidth
 from crowd_counter import count_people
 
+logger = logging.getLogger('servers')
 s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
 
@@ -73,18 +75,15 @@ def bootup(counts, servers):
 def get_servers(servers):
     server_copy = servers.copy()
     for server in server_copy:
-        try:
-            result = requests.get('http://{}:5000/servers'.format(server), timeout=3)
-            if result.status_code == 200:
-                print(result.text)
-                servers.update(set(json.loads(result.text)))
-                print(servers)
-            else:
-                print result.text()
-                servers.remove(server)
-        except requests.exceptions.ConnectionError:
-            print('Failed to retrieve server list from {}').format(server)
-            servers.remove(server)
+        if MY_IP != server:
+            try:
+                result = requests.get('http://{}:5000/servers'.format(server), timeout=3)
+                if result.status_code == 200:
+                    servers.update(set(json.loads(result.text)))
+                else:
+                    print result.text()
+            except requests.exceptions.ConnectionError:
+                logger.info('Failed to retrieve server list from {}').format(server)
 
 
 def retrieve_counts(counts, servers):
@@ -96,10 +95,8 @@ def retrieve_counts(counts, servers):
                     merge_dicts(counts, json.loads(result.text))
                 else:
                     print result.text()
-                    servers.remove(server)
             except requests.exceptions.ConnectionError:
-                servers.remove(server)
-                print('Failed to retrieve counts from {}'.format(server))
+                logger.info('Failed to retrieve counts from {}'.format(server))
 
 
 def send_to_other_servers(servers, camera_id, camera_count, photo_time):
