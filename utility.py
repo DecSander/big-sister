@@ -8,6 +8,7 @@ import logging
 from const import MY_IP, basewidth, TIMEOUT
 from crowd_counter import count_people
 
+logging.basicConfig(filename='example.log', level=logging.INFO)
 logger = logging.getLogger('servers')
 s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
@@ -83,7 +84,7 @@ def get_servers(servers):
                 else:
                     logger.warning('Failed to retrieve server list from {}: {}'.format(server, result.text()))
             except requests.exceptions.ConnectionError:
-                logger.info('Failed to retrieve server list from {}: Couldn\' connect to IP address').format(server)
+                logger.info('Failed to retrieve server list from {}: Couldn\'t connect to IP address'.format(server))
 
 
 def retrieve_counts(counts, servers):
@@ -113,7 +114,7 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time):
                 if result.status_code != 200:
                     print result.json()
             except requests.exceptions.ConnectionError:
-                print('Failed to send count to {}'.format(server))
+                logger.info('Failed to send count to {}'.format(server))
 
 
 def resize_image(imagefile):
