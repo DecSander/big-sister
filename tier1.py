@@ -91,16 +91,16 @@ def new_backend():
     return jsonify(True)
 
 
-@app.route("/servers", methods=['GET'])
+@app.route("/servers_backends", methods=['GET'])
 def server_list():
-    return jsonify(list(servers))
+    return jsonify({'servers': list(servers), 'backends': list(backends), 'counts': most_recent_counts})
 
 
-@app.route("/current_counts", methods=['GET'])
-def current_data():
+@app.route("/", methods=['GET'])
+def current_counts():
     return jsonify(most_recent_counts)
 
 
 if __name__ == "__main__":
-    bootup(most_recent_counts, servers)
+    bootup(most_recent_counts, servers, backends)
     app.run(host='0.0.0.0', port=5000, threaded=True)

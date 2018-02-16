@@ -15,9 +15,10 @@ s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
 
 
-def setup_db(counts, servers):
+def setup_db(counts, servers, backends):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
+
     c.execute('CREATE TABLE IF NOT EXISTS camera_counts (camera_id INTEGER UNIQUE, camera_count INTEGER, photo_time REAL);')
     c.execute('CREATE TABLE IF NOT EXISTS server_list (ip_address TEXT UNIQUE);')
     c.execute('CREATE TABLE IF NOT EXISTS backend_list (ip_address TEXT UNIQUE);')
@@ -33,10 +34,17 @@ def setup_db(counts, servers):
         counts[camera_id] = {'camera_count': camera_count, 'photo_time': photo_time}
 
     c.execute('SELECT ip_address FROM server_list;')
-    ip_rows = c.fetchall()
-    for row in ip_rows:
+    server_rows = c.fetchall()
+    for row in server_rows:
         ip_address = row[0]
         servers.add(ip_address)
+
+    c.execute('SELECT ip_address FROM backend_list;')
+    backend_rows = c.fetchall()
+    for row in backend_rows:
+        ip_address = row[0]
+        servers.add(ip_address)
+
     conn.close()
 
 
@@ -96,13 +104,12 @@ def save_backend(backend):
         pass
 
 
-def bootup(counts, servers):
-    setup_db(counts, servers)
-    get_servers(servers)
-    retrieve_counts(counts, servers)
+def bootup(counts, servers, backends):
+    setup_db(counts, servers, backends)
+    retrieve_startup_info(servers, backends, counts)
 
 
-def get_servers(servers):
+def retrieve_startup_info(servers, backends, counts):
     unvisited_servers = servers.copy()
     visited_servers = set()
     while len(unvisited_servers) > 0:
@@ -110,31 +117,21 @@ def get_servers(servers):
         visited_servers.add(server)
         if MY_IP != server:
             try:
-                result = requests.get('http://{}:5000/servers'.format(server), timeout=TIMEOUT)
+                result = requests.get('http://{}:5000/servers_backends'.format(server), timeout=TIMEOUT)
                 if result.status_code == 200:
-                    new_servers = json.loads(result.text)
-                    servers.update(set(new_servers))
-                    for new_server in new_servers:
+                    startup_info = json.loads(result.text)
+                    servers.update(set(startup_info['servers']))
+                    backends.update(set(startup_info['backends']))
+                    merge_dicts(counts, startup_info['counts'])
+
+                    for new_server in startup_info['servers']:
                         save_server(new_server)
                         if new_server not in visited_servers:
                             unvisited_servers.add(new_server)
                 else:
-                    logger.warning('Failed to retrieve server list from {}: {}'.format(server, result.text()))
+                    logger.warning('Failed to retrieve startup info from {}: {}'.format(server, result.text()))
             except requests.exceptions.ConnectionError:
-                logger.info('Failed to retrieve server list from {}: Couldn\'t connect to IP address'.format(server))
-
-
-def retrieve_counts(counts, servers):
-    for server in servers:
-        if MY_IP != server:
-            try:
-                result = requests.get('http://{}:5000/current_counts'.format(server), timeout=TIMEOUT)
-                if result.status_code == 200:
-                    merge_dicts(counts, json.loads(result.text))
-                else:
-                    logger.warning('Failed to retrieve counts from {}: {}'.format(server, result.text()))
-            except requests.exceptions.ConnectionError:
-                logger.info('Failed to retrieve counts from {}: Couldn\' connect to IP address'.format(server))
+                logger.info('Failed to retrieve startup info from {}: Couldn\'t connect to IP address'.format(server))
 
 
 def send_to_other_servers(servers, camera_id, camera_count, photo_time):
