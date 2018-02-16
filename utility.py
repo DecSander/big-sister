@@ -6,7 +6,6 @@ import json
 import re
 import logging
 from const import MY_IP, basewidth, TIMEOUT, DB_NAME
-from crowd_counter import count_people
 
 
 logging.basicConfig(filename='server.log', level=logging.INFO)
@@ -21,6 +20,7 @@ def setup_db(counts, servers):
     c = conn.cursor()
     c.execute('CREATE TABLE IF NOT EXISTS camera_counts (camera_id INTEGER UNIQUE, camera_count INTEGER, photo_time REAL);')
     c.execute('CREATE TABLE IF NOT EXISTS server_list (ip_address TEXT UNIQUE);')
+    c.execute('CREATE TABLE IF NOT EXISTS backend_list (ip_address TEXT UNIQUE);')
     conn.commit()
 
     c = conn.cursor()
@@ -86,6 +86,16 @@ def save_server(server):
         pass
 
 
+def save_backend(backend):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    try:
+        c.execute('INSERT INTO backend_list values (?)', (backend,))
+        conn.commit()
+    except sqlite3.IntegrityError:  # Indicates we already had this server address
+        pass
+
+
 def bootup(counts, servers):
     setup_db(counts, servers)
     get_servers(servers)
@@ -145,18 +155,17 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time):
 
 
 def resize_image(imagefile):
+    imagefile.seek(0)
     image = Image.open(imagefile)
     wpercent = basewidth / float(image.size[0])
     hsize = int(float(image.size[1]) * float(wpercent))
     return image.resize((basewidth, hsize), Image.ANTIALIAS)
 
 
-def process_image(servers, counts, resized, camera_id, photo_time):
-        camera_count = count_people(resized)
-
-        if temp_store(counts, camera_id, camera_count, photo_time):
-            persist(camera_id, camera_count, photo_time)
-            send_to_other_servers(servers, camera_id, camera_count, photo_time)
+def process_image(servers, counts, camera_count, camera_id, photo_time):
+    if temp_store(counts, camera_id, camera_count, photo_time):
+        persist(camera_id, camera_count, photo_time)
+        send_to_other_servers(servers, camera_id, camera_count, photo_time)
 
 
 def upload_file_to_s3(file, camera_id, photo_time):
@@ -171,3 +180,17 @@ def upload_file_to_s3(file, camera_id, photo_time):
 def validate_ip(addr):
     pattern = re.compile('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
     return pattern.match(addr)
+
+
+def get_camera_count(imagefile, backends):
+    for backend in backends:
+        try:
+            result = requests.post('http://{}:5001'.format(backend), files={'imagefile': imagefile})
+            if result.status_code == 200:
+                try:
+                    return json.loads(result.text)
+                except ValueError:  # Received invalid JSON, try next one
+                    pass
+            # Else, we got an error message, try next one
+        except requests.exceptions.ConnectionError:
+            pass  # This backend is down, trying next one

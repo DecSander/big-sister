@@ -1,10 +1,8 @@
 from flask import Flask, request, jsonify
 import traceback
-import os
-import threading
-from utility import temp_store, persist, is_number, bootup, resize_image
-from utility import process_image, upload_file_to_s3, validate_ip, save_server
-from const import MAX_MB, MB_TO_BYTES, servers
+from utility import temp_store, persist, is_number, bootup, get_camera_count
+from utility import process_image, validate_ip, save_server, save_backend
+from const import servers, backends
 
 
 app = Flask(__name__)
@@ -47,23 +45,18 @@ def upload_file():
         elif photo_time is None or not is_number(photo_time):
             return jsonify({'error': 'Photo time was not supplied'}), 400
 
-        # Check file length
-        imagefile.seek(0, os.SEEK_END)
-        filesize = imagefile.tell()
-        imagefile.seek(0)
-        if filesize > MAX_MB * MB_TO_BYTES:
-            return jsonify({'error': 'Image supplied was too large, must be less than {} MB'.format(MAX_MB)})
-
-        resized = resize_image(imagefile)
-
         camera_id = int(camera_id)
         photo_time = float(photo_time)
 
-        cv_thread = threading.Thread(target=process_image, args=(servers, most_recent_counts, resized, camera_id, photo_time))
-        storage_thread = threading.Thread(target=upload_file_to_s3, args=(imagefile, camera_id, photo_time))
+        should_update = ('camera_id' not in most_recent_counts) or (most_recent_counts['camera_id'] < photo_time)
+        if not should_update:  # We have more recent data than this for this camera
+            return jsonify(False)
 
-        cv_thread.start()
-        # storage_thread.start()
+        camera_count = get_camera_count(imagefile, backends)
+
+        if camera_count is not None:
+            process_image(servers, most_recent_counts, camera_count, camera_id, photo_time)
+            # upload_file_to_s3(imagefile, camera_id, photo_time)
 
         return jsonify(True)
 
@@ -85,6 +78,19 @@ def new_server():
     return jsonify(True)
 
 
+@app.route("/new_backend", methods=['POST'])
+def new_backend():
+    req_json = request.json()
+    if 'ip_address' not in req_json:
+        return jsonify({'error': 'IP Address not included'}), 400
+    elif validate_ip(req_json['ip_address']):
+        return jsonify({'error': 'Invalid IP Address'})
+    new_ip_address = req_json['ip_address']
+    backends.add(new_ip_address)
+    save_backend(new_ip_address)
+    return jsonify(True)
+
+
 @app.route("/servers", methods=['GET'])
 def server_list():
     return jsonify(list(servers))
@@ -97,4 +103,4 @@ def current_data():
 
 if __name__ == "__main__":
     bootup(most_recent_counts, servers)
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', port=5000, threaded=True)
