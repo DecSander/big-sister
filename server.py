@@ -99,5 +99,5 @@ def current_data():
 
 
 if __name__ == "__main__":
-    most_recent_counts = bootup(most_recent_counts, servers)
+    bootup(most_recent_counts, servers)
     app.run(host='0.0.0.0')
