@@ -76,12 +76,14 @@ def get_servers(servers):
         try:
             result = requests.get('http://{}:5000/servers'.format(server), timeout=3)
             if result.status_code == 200:
+                print(result.text)
                 servers.update(set(json.loads(result.text)))
+                print(servers)
             else:
                 print result.text()
                 servers.remove(server)
         except requests.exceptions.ConnectionError:
-            print('Failed to retrieve server list').format(server)
+            print('Failed to retrieve server list from {}').format(server)
             servers.remove(server)
 
 
