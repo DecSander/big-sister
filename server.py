@@ -2,8 +2,9 @@ from flask import Flask, request, jsonify
 import traceback
 import os
 import threading
-from utility import temp_store, persist, is_number, bootup, resize_image, process_image, upload_file_to_s3
-from const import MAX_MB, MB_TO_BYTES
+from utility import temp_store, persist, is_number, bootup, resize_image
+from utility import process_image, upload_file_to_s3, validate_ip
+from const import MAX_MB, MB_TO_BYTES, servers
 
 app = Flask(__name__)
 most_recent_counts = {}
@@ -46,9 +47,9 @@ def upload_file():
             content_type = imagefile.content_type
             return jsonify({'error': 'Image supplied must be a jpeg, you supplied {}'.format(content_type)}), 400
         elif camera_id is None or not is_number(camera_id):
-            return jsonify({'error': 'Camera ID was not supplied'})
+            return jsonify({'error': 'Camera ID was not supplied'}), 400
         elif photo_time is None or not is_number(photo_time):
-            return jsonify({'error': 'Photo time was not supplied'})
+            return jsonify({'error': 'Photo time was not supplied'}), 400
 
         # Check file length
         imagefile.seek(0, os.SEEK_END)
@@ -62,7 +63,7 @@ def upload_file():
         camera_id = int(camera_id)
         photo_time = float(photo_time)
 
-        cv_thread = threading.Thread(target=process_image, args=(most_recent_counts, resized, camera_id, photo_time))
+        cv_thread = threading.Thread(target=process_image, args=(servers, most_recent_counts, resized, camera_id, photo_time))
         storage_thread = threading.Thread(target=upload_file_to_s3, args=(imagefile, camera_id, photo_time))
 
         cv_thread.start()
@@ -75,11 +76,28 @@ def upload_file():
         return jsonify({'error': 'Server Error'}), 500
 
 
+@app.route("/new_server", methods=['POST'])
+def new_server():
+    req_json = request.json()
+    if 'ip_address' not in req_json:
+        return jsonify({'error': 'IP Address not included'}), 400
+    elif validate_ip(req_json['ip_address']):
+        return jsonify({'error': 'Invalid IP Address'})
+    new_ip_address = req_json['ip_address']
+    servers.add(new_ip_address)
+    return jsonify(True)
+
+
+@app.route("/servers", methods=['GET'])
+def server_list():
+    return jsonify(list(servers))
+
+
 @app.route("/current_counts", methods=['GET'])
 def current_data():
     return jsonify(most_recent_counts)
 
 
 if __name__ == "__main__":
-    bootup(most_recent_counts)
+    most_recent_counts = bootup(most_recent_counts)
     app.run(host='0.0.0.0')

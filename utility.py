@@ -3,6 +3,7 @@ import sqlite3
 import requests
 from PIL import Image
 import json
+import re
 from const import servers, MY_IP, basewidth
 from crowd_counter import count_people
 
@@ -65,16 +66,37 @@ def merge_dicts(x, y):
 
 def bootup(counts):
     setup_db(counts)
+    get_servers()
+    retrieve_counts(counts)
 
+
+def get_servers(servers):
+    server_copy = servers.copy()
+    for server in server_copy:
+        try:
+            result = requests.get('http://{}:5000/servers'.format(server), timeout=3)
+            if result.status_code == 200:
+                servers.update(set(json.loads(result.text)))
+            else:
+                print result.text()
+                servers.remove(server)
+        except requests.exceptions.ConnectionError:
+            print('Failed to retrieve server list').format(server)
+            servers.remove(server)
+
+
+def retrieve_counts(counts):
     for server in servers:
         if MY_IP != server:
             try:
                 result = requests.get('http://{}:5000/current_counts'.format(server), timeout=3)
                 if result.status_code == 200:
-                    counts = merge_dicts(counts, json.loads(result.text))
+                    merge_dicts(counts, json.loads(result.text))
                 else:
-                    print result.json()
+                    print result.text()
+                    servers.remove(server)
             except requests.exceptions.ConnectionError:
+                servers.remove(server)
                 print('Failed to retrieve counts from {}'.format(server))
 
 
@@ -98,7 +120,7 @@ def send_to_other_servers(camera_id, camera_count, photo_time):
 def resize_image(imagefile):
     image = Image.open(imagefile)
     wpercent = basewidth / float(image.size[0])
-    hsize = int((float(image.size[1]) * float(wpercent)))
+    hsize = int(float(image.size[1]) * float(wpercent))
     return image.resize((basewidth, hsize), Image.ANTIALIAS)
 
 
@@ -117,3 +139,8 @@ def upload_file_to_s3(file, camera_id, photo_time):
         '{}_{}.jpeg'.format(camera_id, int(photo_time * 1000)),
         ExtraArgs={"ContentType": 'image/jpeg'}
     )
+
+
+def validate_ip(addr):
+    pattern = re.compile('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
+    return pattern.match(addr)
