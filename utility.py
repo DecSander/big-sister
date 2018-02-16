@@ -5,7 +5,7 @@ from PIL import Image
 import json
 import re
 import logging
-from const import MY_IP, basewidth
+from const import MY_IP, basewidth, TIMEOUT
 from crowd_counter import count_people
 
 logger = logging.getLogger('servers')
@@ -77,26 +77,26 @@ def get_servers(servers):
     for server in server_copy:
         if MY_IP != server:
             try:
-                result = requests.get('http://{}:5000/servers'.format(server), timeout=3)
+                result = requests.get('http://{}:5000/servers'.format(server), timeout=TIMEOUT)
                 if result.status_code == 200:
                     servers.update(set(json.loads(result.text)))
                 else:
-                    print result.text()
+                    logger.warning('Failed to retrieve server list from {}: {}'.format(server, result.text()))
             except requests.exceptions.ConnectionError:
-                logger.info('Failed to retrieve server list from {}').format(server)
+                logger.info('Failed to retrieve server list from {}: Couldn\' connect to IP address').format(server)
 
 
 def retrieve_counts(counts, servers):
     for server in servers:
         if MY_IP != server:
             try:
-                result = requests.get('http://{}:5000/current_counts'.format(server), timeout=3)
+                result = requests.get('http://{}:5000/current_counts'.format(server), timeout=TIMEOUT)
                 if result.status_code == 200:
                     merge_dicts(counts, json.loads(result.text))
                 else:
-                    print result.text()
+                    logger.warning('Failed to retrieve counts from {}: {}'.format(server, result.text()))
             except requests.exceptions.ConnectionError:
-                logger.info('Failed to retrieve counts from {}'.format(server))
+                logger.info('Failed to retrieve counts from {}: Couldn\' connect to IP address'.format(server))
 
 
 def send_to_other_servers(servers, camera_id, camera_count, photo_time):
@@ -104,7 +104,7 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time):
         if MY_IP != server:
             try:
                 result = requests.post('http://{}:5000/update_camera'.format(server),
-                                       timeout=3,
+                                       timeout=TIMEOUT,
                                        json={
                                        'camera_id': camera_id,
                                        'camera_count': camera_count,

@@ -5,3 +5,4 @@ servers = set(['18.218.132.215', '18.221.18.72'])
 MAX_MB = 2
 MB_TO_BYTES = 1024 * 1024
 basewidth = 1000
+TIMEOUT = 3
