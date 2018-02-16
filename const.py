@@ -6,3 +6,4 @@ MAX_MB = 2
 MB_TO_BYTES = 1024 * 1024
 basewidth = 1000
 TIMEOUT = 3
+DB_NAME = 'server.db'

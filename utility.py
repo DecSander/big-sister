@@ -5,7 +5,7 @@ from PIL import Image
 import json
 import re
 import logging
-from const import MY_IP, basewidth, TIMEOUT
+from const import MY_IP, basewidth, TIMEOUT, DB_NAME
 from crowd_counter import count_people
 
 logging.basicConfig(filename='server.log', level=logging.INFO)
@@ -16,10 +16,10 @@ s3_resource = boto3.resource('s3')
 
 
 def setup_db(counts, servers):
-    conn = sqlite3.connect('counts.db')
+    conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute('CREATE TABLE IF NOT EXISTS camera_counts (camera_id INTEGER UNIQUE, camera_count INTEGER, photo_time REAL);')
-    c.execute('CREATE TABLE IF NOT EXISTS server_list (ip_address TEXT);')
+    c.execute('CREATE TABLE IF NOT EXISTS server_list (ip_address TEXT UNIQUE);')
     conn.commit()
 
     c = conn.cursor()
@@ -50,12 +50,12 @@ def temp_store(counts, camera_id, camera_count, photo_time):
 
 
 def persist(camera_id, camera_count, photo_time):
-    conn = sqlite3.connect('counts.db')
+    conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     try:
         c.execute('INSERT INTO camera_counts values (?, ?, ?);', (camera_id, camera_count, photo_time))
         conn.commit()
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError:  # Indicates that camera_id is already in the database
         c.execute('UPDATE camera_counts SET camera_count = ?, photo_time = ?;', (camera_count, photo_time))
         conn.commit()
     conn.close()
@@ -75,6 +75,16 @@ def merge_dicts(x, y):
             x[k] = y[k]
 
 
+def save_server(server):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    try:
+        c.execute('INSERT INTO server_list values (?)', (server,))
+        conn.commit()
+    except sqlite3.IntegrityError:  # Indicates we already had this server address
+        pass
+
+
 def bootup(counts, servers):
     setup_db(counts, servers)
     get_servers(servers)
@@ -82,13 +92,21 @@ def bootup(counts, servers):
 
 
 def get_servers(servers):
-    server_copy = servers.copy()
-    for server in server_copy:
+    unvisited_servers = servers.copy()
+    visited_servers = set()
+    while len(unvisited_servers) > 0:
+        server = unvisited_servers.pop()
+        visited_servers.add(server)
         if MY_IP != server:
             try:
                 result = requests.get('http://{}:5000/servers'.format(server), timeout=TIMEOUT)
                 if result.status_code == 200:
-                    servers.update(set(json.loads(result.text)))
+                    new_servers = json.loads(result.text)
+                    servers.update(set(new_servers))
+                    for new_server in new_servers:
+                        save_server(new_server)
+                        if new_server not in visited_servers:
+                            unvisited_servers.add(new_server)
                 else:
                     logger.warning('Failed to retrieve server list from {}: {}'.format(server, result.text()))
             except requests.exceptions.ConnectionError:

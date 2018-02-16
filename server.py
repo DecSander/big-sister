@@ -3,8 +3,9 @@ import traceback
 import os
 import threading
 from utility import temp_store, persist, is_number, bootup, resize_image
-from utility import process_image, upload_file_to_s3, validate_ip
+from utility import process_image, upload_file_to_s3, validate_ip, save_server
 from const import MAX_MB, MB_TO_BYTES, servers
+
 
 app = Flask(__name__)
 most_recent_counts = {}
@@ -85,6 +86,7 @@ def new_server():
         return jsonify({'error': 'Invalid IP Address'})
     new_ip_address = req_json['ip_address']
     servers.add(new_ip_address)
+    save_server(new_ip_address)
     return jsonify(True)
 
 
@@ -99,5 +101,5 @@ def current_data():
 
 
 if __name__ == "__main__":
-    most_recent_counts = bootup(most_recent_counts, servers)
+    bootup(most_recent_counts, servers)
     app.run(host='0.0.0.0')
