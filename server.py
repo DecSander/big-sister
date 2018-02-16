@@ -18,7 +18,7 @@ def update_camera_value():
         return jsonify({'error': 'JSON Dictionary not supplied'}), 400
     elif 'camera_id' not in json_values or type(json_values['camera_id']) != int:
         return jsonify({'error': 'No camera id supplied'}), 400
-    elif 'camera_count' not in json_values or type(json_values['camera_count']) != float:
+    elif 'camera_count' not in json_values or type(json_values['camera_count']) != int:
         return jsonify({'error': 'No camera count supplied'}), 400
     else:
         camera_id = json_values['camera_id']

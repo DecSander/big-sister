@@ -8,6 +8,7 @@ import logging
 from const import MY_IP, basewidth, TIMEOUT, DB_NAME
 from crowd_counter import count_people
 
+
 logging.basicConfig(filename='server.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
 logger = logging.getLogger('servers')
