@@ -9,25 +9,33 @@ from const import MY_IP, basewidth, TIMEOUT
 from crowd_counter import count_people
 
 logging.basicConfig(filename='server.log', level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler())
 logger = logging.getLogger('servers')
 s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
 
 
-def setup_db(counts):
+def setup_db(counts, servers):
     conn = sqlite3.connect('counts.db')
     c = conn.cursor()
     c.execute('CREATE TABLE IF NOT EXISTS camera_counts (camera_id INTEGER UNIQUE, camera_count INTEGER, photo_time REAL);')
+    c.execute('CREATE TABLE IF NOT EXISTS server_list (ip_address TEXT);')
     conn.commit()
 
     c = conn.cursor()
     c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts;')
-    rows = c.fetchall()
-    for row in rows:
+    camera_rows = c.fetchall()
+    for row in camera_rows:
         camera_id = row[0]
         camera_count = row[1]
         photo_time = row[2]
         counts[camera_id] = {'camera_count': camera_count, 'photo_time': photo_time}
+
+    c.execute('SELECT ip_address FROM server_list;')
+    ip_rows = c.fetchall()
+    for row in ip_rows:
+        ip_address = row[0]
+        servers.add(ip_address)
     conn.close()
 
 
@@ -68,7 +76,7 @@ def merge_dicts(x, y):
 
 
 def bootup(counts, servers):
-    setup_db(counts)
+    setup_db(counts, servers)
     get_servers(servers)
     retrieve_counts(counts, servers)
 
