@@ -4,7 +4,7 @@ import requests
 from PIL import Image
 import json
 import re
-from const import servers, MY_IP, basewidth
+from const import MY_IP, basewidth
 from crowd_counter import count_people
 
 s3_client = boto3.client('s3')
@@ -64,9 +64,9 @@ def merge_dicts(x, y):
             x[k] = y[k]
 
 
-def bootup(counts):
+def bootup(counts, servers):
     setup_db(counts)
-    get_servers()
+    get_servers(servers)
     retrieve_counts(counts)
 
 
@@ -85,7 +85,7 @@ def get_servers(servers):
             servers.remove(server)
 
 
-def retrieve_counts(counts):
+def retrieve_counts(counts, servers):
     for server in servers:
         if MY_IP != server:
             try:
@@ -100,7 +100,7 @@ def retrieve_counts(counts):
                 print('Failed to retrieve counts from {}'.format(server))
 
 
-def send_to_other_servers(camera_id, camera_count, photo_time):
+def send_to_other_servers(servers, camera_id, camera_count, photo_time):
     for server in servers:
         if MY_IP != server:
             try:
@@ -124,12 +124,12 @@ def resize_image(imagefile):
     return image.resize((basewidth, hsize), Image.ANTIALIAS)
 
 
-def process_image(counts, resized, camera_id, photo_time):
+def process_image(servers, counts, resized, camera_id, photo_time):
         camera_count = count_people(resized)
 
         if temp_store(counts, camera_id, camera_count, photo_time):
             persist(camera_id, camera_count, photo_time)
-            send_to_other_servers(camera_id, camera_count, photo_time)
+            send_to_other_servers(servers, camera_id, camera_count, photo_time)
 
 
 def upload_file_to_s3(file, camera_id, photo_time):
