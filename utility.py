@@ -8,7 +8,7 @@ import logging
 from const import MY_IP, basewidth, TIMEOUT
 from crowd_counter import count_people
 
-logging.basicConfig(filename='example.log', level=logging.INFO)
+logging.basicConfig(filename='server.log', level=logging.INFO)
 logger = logging.getLogger('servers')
 s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
