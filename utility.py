@@ -67,7 +67,7 @@ def merge_dicts(x, y):
 def bootup(counts, servers):
     setup_db(counts)
     get_servers(servers)
-    retrieve_counts(counts)
+    retrieve_counts(counts, servers)
 
 
 def get_servers(servers):
