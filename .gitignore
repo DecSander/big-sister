@@ -5,4 +5,4 @@ ssd_mobilenet*
 *.db
 crowd_counter/faster_rcnn_inception_v2_coco_2018_01_28/
 faster_rcnn_inception_v2_coco_2018_01_28.tar.gz
-server.log
+*.log

@@ -181,11 +181,11 @@ def validate_ip(addr):
 
 
 def get_camera_count(imagefile, backends):
+    imagefile_contents = imagefile.read()
     for backend in backends:
         try:
-            imagefile_str = StringIO(imagefile.read())
+            imagefile_str = StringIO(imagefile_contents)
             result = requests.post('http://{}:5001'.format(backend), files={'imagefile': imagefile_str})
-            imagefile_str.seek(0)
             if result.status_code == 200:
                 try:
                     return json.loads(result.text)

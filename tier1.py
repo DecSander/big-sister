@@ -1,14 +1,10 @@
 from flask import Flask, request, jsonify
 import traceback
-import logging
 from utility import temp_store, persist, is_number, bootup, get_camera_count
-from utility import process_image, validate_ip, save_server, save_backend
+from utility import process_image, validate_ip, save_server, save_backend, logger
 from const import servers, backends
 
 
-logging.basicConfig(filename='server.log', level=logging.INFO)
-logging.getLogger().addHandler(logging.StreamHandler())
-logger = logging.getLogger('tier1')
 app = Flask(__name__)
 most_recent_counts = {}
 
@@ -52,7 +48,7 @@ def upload_file():
         camera_id = int(camera_id)
         photo_time = float(photo_time)
 
-        should_update = (camera_id not in most_recent_counts) or (most_recent_counts[camera_id] < photo_time)
+        should_update = (camera_id not in most_recent_counts) or (most_recent_counts[camera_id]['photo_time'] < photo_time)
         if not should_update:  # We have more recent data than this for this camera
             logger.info('Received old message')
             return jsonify(False)
