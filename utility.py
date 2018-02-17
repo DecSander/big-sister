@@ -11,7 +11,7 @@ from const import MY_IP, basewidth, TIMEOUT, DB_NAME
 
 logging.basicConfig(filename='utility.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
-logger = logging.getLogger('servers')
+logger = logging.getLogger('utility')
 s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
 

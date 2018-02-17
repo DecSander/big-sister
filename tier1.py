@@ -8,6 +8,7 @@ from const import servers, backends
 
 logging.basicConfig(filename='server.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
+logger = logging.getLogger('tier1')
 app = Flask(__name__)
 most_recent_counts = {}
 
