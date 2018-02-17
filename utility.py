@@ -6,7 +6,7 @@ import json
 import re
 import logging
 from StringIO import StringIO
-from const import MY_IP, basewidth, TIMEOUT, DB_NAME
+from const import MY_IP, basewidth, TIMEOUT, TIER1_DB, TIER2_DB
 
 
 logging.basicConfig(filename='utility.log', level=logging.INFO)
@@ -16,8 +16,8 @@ s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
 
 
-def setup_db(counts, servers, backends):
-    conn = sqlite3.connect(DB_NAME)
+def setup_db_tier1(counts, servers, backends):
+    conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
 
     c.execute('CREATE TABLE IF NOT EXISTS camera_counts (camera_id INTEGER UNIQUE, camera_count INTEGER, photo_time REAL);')
@@ -49,6 +49,22 @@ def setup_db(counts, servers, backends):
     conn.close()
 
 
+def setup_db_tier2(servers):
+    conn = sqlite3.connect(TIER2_DB)
+    c = conn.cursor()
+
+    c.execute('CREATE TABLE IF NOT EXISTS server_list (ip_address TEXT UNIQUE);')
+    conn.commit()
+
+    c.execute('SELECT ip_address FROM server_list;')
+    server_rows = c.fetchall()
+    for row in server_rows:
+        ip_address = row[0]
+        servers.add(ip_address)
+
+    conn.close()
+
+
 def temp_store(counts, camera_id, camera_count, photo_time):
     should_update = ('camera_id' not in counts) or (counts['camera_id'] < photo_time)
     if should_update:
@@ -60,7 +76,7 @@ def temp_store(counts, camera_id, camera_count, photo_time):
 
 
 def persist(camera_id, camera_count, photo_time):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
     try:
         c.execute('INSERT INTO camera_counts values (?, ?, ?);', (camera_id, camera_count, photo_time))
@@ -85,7 +101,8 @@ def merge_dicts(x, y):
             x[k] = y[k]
 
 
-def save_server(server):
+def save_server(server, tier1):
+    DB_NAME = TIER1_DB if tier1 else TIER2_DB
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     try:
@@ -96,7 +113,7 @@ def save_server(server):
 
 
 def save_backend(backend):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
     try:
         c.execute('INSERT INTO backend_list values (?)', (backend,))
@@ -105,23 +122,39 @@ def save_backend(backend):
         pass
 
 
-def notify_servers(servers):
+def notify_new_server(servers):
     for server in servers:
         try:
             result = requests.post('http://{}:5000/new_server'.format(server), json={'ip_address': MY_IP})
             if result.status_code != 200:
-                logger.warning('Notification for server {} failed: {}'.format(server, result.text))
+                logger.warning('New server notification for server {} failed: {}'.format(server, result.text))
         except requests.exceptions.ConnectionError:
-            logger.info('Failed to notify server {}'.format(server))
+            logger.info('New server notification for server {} failed: Can\'t connect to server'.format(server))
 
 
-def bootup(counts, servers, backends):
-    setup_db(counts, servers, backends)
-    retrieve_startup_info(servers, backends, counts)
-    notify_servers(servers)
+def notify_new_backend(servers):
+    for server in servers:
+        try:
+            result = requests.post('http://{}:5000/new_backend'.format(server), json={'ip_address': MY_IP})
+            if result.status_code != 200:
+                logger.warning('New server notification for server {} failed: {}'.format(server, result.text))
+        except requests.exceptions.ConnectionError:
+            logger.info('New server notification for server {} failed: Can\'t connect to server'.format(server))
 
 
-def retrieve_startup_info(servers, backends, counts):
+def bootup_tier1(counts, servers, backends):
+    setup_db_tier1(counts, servers, backends)
+    retrieve_startup_info(servers, backends, counts, True)
+    notify_new_server(servers)
+
+
+def bootup_tier2(counts, servers, backends):
+    setup_db_tier2(servers)
+    retrieve_startup_info(servers, backends, counts, False)
+    notify_new_backend(servers)
+
+
+def retrieve_startup_info(servers, backends, counts, tier1):
     unvisited_servers = servers.copy()
     visited_servers = set()
     while len(unvisited_servers) > 0:
@@ -137,7 +170,7 @@ def retrieve_startup_info(servers, backends, counts):
                     merge_dicts(counts, startup_info['counts'])
 
                     for new_server in startup_info['servers']:
-                        save_server(new_server)
+                        save_server(new_server, tier1)
                         if new_server not in visited_servers:
                             unvisited_servers.add(new_server)
                 else:

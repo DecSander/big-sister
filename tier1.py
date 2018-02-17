@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import traceback
-from utility import temp_store, persist, is_number, bootup, get_camera_count
+from utility import temp_store, persist, is_number, bootup_tier1, get_camera_count
 from utility import process_image, validate_ip, save_server, save_backend, logger
 from const import servers, backends
 
@@ -103,5 +103,5 @@ def current_counts():
 
 
 if __name__ == "__main__":
-    bootup(most_recent_counts, servers, backends)
+    bootup_tier1(most_recent_counts, servers, backends)
     app.run(host='0.0.0.0', port=5000, threaded=True)
