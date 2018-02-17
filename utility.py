@@ -5,10 +5,11 @@ from PIL import Image
 import json
 import re
 import logging
+from StringIO import StringIO
 from const import MY_IP, basewidth, TIMEOUT, DB_NAME
 
 
-logging.basicConfig(filename='server.log', level=logging.INFO)
+logging.basicConfig(filename='utility.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
 logger = logging.getLogger('servers')
 s3_client = boto3.client('s3')
@@ -129,7 +130,7 @@ def retrieve_startup_info(servers, backends, counts):
                         if new_server not in visited_servers:
                             unvisited_servers.add(new_server)
                 else:
-                    logger.warning('Failed to retrieve startup info from {}: {}'.format(server, result.text()))
+                    logger.warning('Failed to retrieve startup info from {}: {}'.format(server, result.text))
             except requests.exceptions.ConnectionError:
                 logger.info('Failed to retrieve startup info from {}: Couldn\'t connect to IP address'.format(server))
 
@@ -182,12 +183,14 @@ def validate_ip(addr):
 def get_camera_count(imagefile, backends):
     for backend in backends:
         try:
-            result = requests.post('http://{}:5001'.format(backend), files={'imagefile': imagefile})
+            imagefile_str = StringIO(imagefile.read())
+            result = requests.post('http://{}:5001'.format(backend), files={'imagefile': imagefile_str})
+            imagefile_str.seek(0)
             if result.status_code == 200:
                 try:
                     return json.loads(result.text)
                 except ValueError:  # Received invalid JSON, try next one
-                    pass
+                    logger.warning('Failed to retrieve camera count from {}: {}'.format(backend, result.text))
             # Else, we got an error message, try next one
         except requests.exceptions.ConnectionError:
-            pass  # This backend is down, trying next one
+            logger.info('Failed to retrieve camera count from {}: Couldn\'t connect to IP address'.format(backend))

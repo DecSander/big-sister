@@ -1,10 +1,13 @@
 from flask import Flask, request, jsonify
 import traceback
+import logging
 from utility import temp_store, persist, is_number, bootup, get_camera_count
 from utility import process_image, validate_ip, save_server, save_backend
 from const import servers, backends
 
 
+logging.basicConfig(filename='server.log', level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler())
 app = Flask(__name__)
 most_recent_counts = {}
 
@@ -48,17 +51,18 @@ def upload_file():
         camera_id = int(camera_id)
         photo_time = float(photo_time)
 
-        should_update = ('camera_id' not in most_recent_counts) or (most_recent_counts['camera_id'] < photo_time)
+        should_update = (camera_id not in most_recent_counts) or (most_recent_counts[camera_id] < photo_time)
         if not should_update:  # We have more recent data than this for this camera
+            logger.info('Received old message')
             return jsonify(False)
 
         camera_count = get_camera_count(imagefile, backends)
+        valid_camera_count = camera_count is not None
 
-        if camera_count is not None:
+        if valid_camera_count:
             process_image(servers, most_recent_counts, camera_count, camera_id, photo_time)
             # upload_file_to_s3(imagefile, camera_id, photo_time)
-
-        return jsonify(True)
+        return jsonify(valid_camera_count)
 
     except Exception:
         traceback.print_exc()
