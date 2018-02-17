@@ -105,9 +105,20 @@ def save_backend(backend):
         pass
 
 
+def notify_servers(servers):
+    for server in servers:
+        try:
+            result = requests.post('http://{}:5000/new_server'.format(server), json={'ip_address': MY_IP})
+            if result.status_code != 200:
+                logger.warning('Notification for server {} failed: {}'.format(server, result.text))
+        except requests.exceptions.ConnectionError:
+            logger.info('Failed to notify server {}'.format(server))
+
+
 def bootup(counts, servers, backends):
     setup_db(counts, servers, backends)
     retrieve_startup_info(servers, backends, counts)
+    notify_servers(servers)
 
 
 def retrieve_startup_info(servers, backends, counts):
