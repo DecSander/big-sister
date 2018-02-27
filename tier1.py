@@ -1,11 +1,11 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from utility import temp_store, persist, bootup_tier1, get_camera_count
 from utility import process_image, validate_ip, save_server, save_backend, logger
 from utility import handle_errors, require_json, require_files, require_form, validate_regex
 from const import servers, backends, IP_REGEX
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='')
 most_recent_counts = {}
 
 
@@ -71,10 +71,36 @@ def server_list():
     })
 
 
-@app.route("/", methods=['GET'])
+@app.route("/counts", methods=['GET'])
 @handle_errors
 def current_counts():
     return jsonify(most_recent_counts)
+
+
+@app.route("/counts/<room>", methods=['GET'])
+@handle_errors
+def room_count(room):
+    if room in most_recent_counts:
+        return jsonify(most_recent_counts[room])
+    else:
+        return jsonify({'error': 'Invalid room'}), 400
+
+
+@app.route('/rooms', methods=['GET'])
+@handle_errors
+def rooms_list():
+    return jsonify(most_recent_counts.keys())
+
+
+@app.route('/', methods=['GET'])
+@handle_errors
+def homepage():
+    return send_from_directory('static', 'index.html')
+
+
+@app.route('/static/<path:path>')
+def send_static(path):
+    return send_from_directory('static', path)
 
 
 if __name__ == "__main__":
