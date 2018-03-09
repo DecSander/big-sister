@@ -3,7 +3,7 @@ var current_room = null;
 
 function formatTime(time) {
   // Make a fuzzy time
-  var date = new Date(time);
+  var date = new Date(time * 1000);
   var delta = Math.round((+new Date - date) / 1000);
 
   var minute = 60,
