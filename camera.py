@@ -44,9 +44,9 @@ class Camera(Thread):
     def run(self):
         print "Taking picture..."
         self.take_picture()
-        print "Sending picture..."
+        print "Sending picture [%s]" % self.image_name
         self.send_image()
-        print "Removing sent image..."
+        print "Removing sent image [%s]" % self.image_name
         os.remove(self.image_name)
 
 
@@ -63,4 +63,4 @@ if __name__ == "__main__":
     print "Starting capture/thread loop"
     while True:
         start_camera_thread(camera)
-        time.sleep(1)
+        time.sleep(10)
