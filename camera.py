@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 
+import argparse
 import json
 import requests
 import time
@@ -14,23 +15,22 @@ from threading import Thread
 SERVER_URL = 'http://18.221.18.72:5000'
 server_urls = servers
 
-camera_id = 1
-
 
 def get_urls():
     bootup_camera(server_urls)
 
 
-def start_camera_thread(camera):
-    c = Camera(camera)
+def start_camera_thread(camera, room_label):
+    c = Camera(camera, room_label)
     c.start()
 
 
 class Camera(Thread):
 
-    def __init__(self, camera):
+    def __init__(self, camera, room_label):
         Thread.__init__(self)
         self.camera = camera
+        self.room_label = room_label
 
     def take_picture(self):
         self.photo_time = time.time()
@@ -39,7 +39,7 @@ class Camera(Thread):
 
     def send_image(self):
         files = {'imagefile': (self.image_name, open(os.path.basename(self.image_name), 'rb'), 'image/jpeg')}
-        requests.post(SERVER_URL, files=files, data={"camera_id": camera_id, "photo_time": time.time()})
+        requests.post(SERVER_URL, files=files, data={"camera_id": self.room_label, "photo_time": time.time()})
 
     def run(self):
         print "Taking picture..."
@@ -51,6 +51,11 @@ class Camera(Thread):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-r, --room', type=str, dest="room_label", help='label for room')
+    args = parser.parse_args()
+    print "Room Label: %s" % args.room_label
+
     get_urls()
     print(server_urls)
 
@@ -62,5 +67,5 @@ if __name__ == "__main__":
 
     print "Starting capture/thread loop"
     while True:
-        start_camera_thread(camera)
+        start_camera_thread(camera, args.room_label)
         time.sleep(10)
