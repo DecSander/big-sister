@@ -1,15 +1,28 @@
-import requests
-import os
 import json
+import requests
+import time
+import os
+
+from picamera import PiCamera
 
 
 SERVER_URL = 'http://18.221.18.72:5000'
 server_urls = []
 
+camera = PiCamera()
+camera.resolution = (1024, 768)
+camera.start_preview()
 
-def send_image(pic, f):
-    files = {'imagefile': (os.path.basename(pic), f, 'image/jpeg')}
-    requests.post(SERVER_URL, files=files)
+time.sleep(2)  # Camera warm-up time
+
+
+def take_picture(file="foo.jpg"):
+    camera.capture(file)
+
+
+def send_image(f):
+    files = {'imagefile': (f, open(os.path.basename(f), 'rb'), 'image/jpeg')}
+    requests.post(SERVER_URL, files=files, data={"camera_id": 1, "photo_time": time.time()}, timeout=1)
 
 
 def get_urls():
