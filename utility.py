@@ -1,16 +1,18 @@
-import boto3
+import os
 import sqlite3
 import requests
-from PIL import Image
-import json
-import re
 import logging
-from flask import jsonify, request
-import traceback
-from StringIO import StringIO
-from functools import wraps
 from const import MY_IP, basewidth, TIMEOUT, TIER1_DB, TIER2_DB, SENSOR_DB
 
+if os.path.basename(__file__) != 'camera.py':
+    import boto3
+    from PIL import Image
+    import json
+    import re
+    from flask import jsonify, request
+    import traceback
+    from StringIO import StringIO
+    from functools import wraps
 
 logging.basicConfig(filename='utility.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())

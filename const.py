@@ -9,4 +9,5 @@ basewidth = 1000
 TIMEOUT = 3
 TIER1_DB = 'tier1.db'
 TIER2_DB = 'tier2.db'
+SENSOR_DB = 'sensor.db'
 IP_REGEX = '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
