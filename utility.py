@@ -6,7 +6,6 @@ from const import MY_IP, basewidth, TIMEOUT, TIER1_DB, TIER2_DB, SENSOR_DB
 import json
 
 if sys.argv[0] != 'camera.py':
-    print('A')
     import boto3
     from PIL import Image
     import re
