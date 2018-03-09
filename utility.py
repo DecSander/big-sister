@@ -1,24 +1,25 @@
-import os
+import sys
 import sqlite3
 import requests
 import logging
 from const import MY_IP, basewidth, TIMEOUT, TIER1_DB, TIER2_DB, SENSOR_DB
+import json
 
-if os.path.basename(__file__) != 'camera.py':
+if sys.argv[0] != 'camera.py':
+    print('A')
     import boto3
     from PIL import Image
-    import json
     import re
     from flask import jsonify, request
     import traceback
     from StringIO import StringIO
     from functools import wraps
+    s3_client = boto3.client('s3')
+    s3_resource = boto3.resource('s3')
 
 logging.basicConfig(filename='utility.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
 logger = logging.getLogger('utility')
-s3_client = boto3.client('s3')
-s3_resource = boto3.resource('s3')
 
 
 def setup_db_tier1(counts, servers, backends):
@@ -175,6 +176,7 @@ def bootup_tier2(counts, servers, backends):
 
 
 def bootup_camera(servers):
+    setup_db_sensor(servers)
     retrieve_startup_info(servers, set(), {}, SENSOR_DB)
 
 

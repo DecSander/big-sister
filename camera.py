@@ -40,6 +40,9 @@ if __name__ == "__main__":
     print(server_urls)
 
     while True:
+        print "Taking picture..."
         take_picture("picture.jpg")
+        print "Sending picture..."
         send_image("picture.jpg")
+        print "Picture sent, waiting..."
         time.sleep(1)
