@@ -33,6 +33,7 @@ function formatTime(time) {
 }
 
 function handleSingleRoom(room_id, room) {
+  $('#preloader').hide();
   $('#room-id').text('Room ' + room_id);
   $('#room-count').text('Occupancy: ' + room.camera_count);
   $('#room-time').text(formatTime(room.photo_time));
@@ -81,6 +82,10 @@ function createDropdown(data) {
 }
 
 function refresh() {
+  $('#preloader').show();
+  $('#room-id').text('');
+  $('#room-count').text('');
+  $('#room-time').text('');
   $.ajax({
     url: '/counts',
     type: 'GET',
