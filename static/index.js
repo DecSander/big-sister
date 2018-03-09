@@ -56,7 +56,9 @@ function getNewRoom(room_id) {
     $.ajax({
       url: '/counts/' + room_id,
       type: 'GET',
-      success: function(data) { handleSingleRoom(room_id, data); },
+      success: function(data) {
+        handleSingleRoom(room_id, data);
+      },
       error: console.error
     });
   } else {
@@ -91,17 +93,22 @@ function refresh() {
     type: 'GET',
     success: function(data) {
       all_data = data;
-      if (current_room !== null) handleSingleRoom(current_room, all_data[current_room]);
+      if (Object.keys(all_data).length !== 0) {
+        current_room = Object.keys(all_data)[0];
+        localStorage['current_room'] = current_room;
+      }
+      if (current_room !== null) handleSingleRoom(current_room, all_data[current_room])
+      handleAllCounts(data);
     },
     error: console.error
   });
 }
 
+
 $(document).ready(function() {
   if (localStorage.getItem('room_id') !== null) {
     var room_id = localStorage.getItem('room_id');
     getNewRoom(room_id);
-
     $.ajax({
       url: '/rooms',
       type: 'GET',

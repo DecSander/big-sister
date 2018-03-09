@@ -3,11 +3,13 @@ import requests
 import time
 import os
 
+from utility import bootup_camera
+from const import servers
 from picamera import PiCamera
 
 
 SERVER_URL = 'http://18.221.18.72:5000'
-server_urls = []
+server_urls = servers
 
 camera = PiCamera()
 camera.resolution = (1024, 768)
@@ -26,9 +28,7 @@ def send_image(f):
 
 
 def get_urls():
-    result = requests.get(SERVER_URL + '/servers', timeout=10)
-    global server_urls
-    server_urls = json.loads(result.text)
+    bootup_camera(server_urls)
 
 
 if __name__ == "__main__":

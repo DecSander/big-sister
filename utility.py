@@ -9,7 +9,7 @@ from flask import jsonify, request
 import traceback
 from StringIO import StringIO
 from functools import wraps
-from const import MY_IP, basewidth, TIMEOUT, TIER1_DB, TIER2_DB
+from const import MY_IP, basewidth, TIMEOUT, TIER1_DB, TIER2_DB, SENSOR_DB
 
 
 logging.basicConfig(filename='utility.log', level=logging.INFO)
@@ -68,6 +68,22 @@ def setup_db_tier2(servers):
     conn.close()
 
 
+def setup_db_sensor(servers):
+    conn = sqlite3.connect(SENSOR_DB)
+    c = conn.cursor()
+
+    c.execute('CREATE TABLE IF NOT EXISTS server_list (ip_address TEXT UNIQUE);')
+    conn.commit()
+
+    c.execute('SELECT ip_address FROM server_list;')
+    server_rows = c.fetchall()
+    for row in server_rows:
+        ip_address = row[0]
+        servers.add(ip_address)
+
+    conn.close()
+
+
 def temp_store(counts, camera_id, camera_count, photo_time):
     should_update = ('camera_id' not in counts) or (counts['camera_id'] < photo_time)
     if should_update:
@@ -104,9 +120,8 @@ def merge_dicts(x, y):
             x[k] = y[k]
 
 
-def save_server(server, tier1):
-    DB_NAME = TIER1_DB if tier1 else TIER2_DB
-    conn = sqlite3.connect(DB_NAME)
+def save_server(server, db):
+    conn = sqlite3.connect(db)
     c = conn.cursor()
     try:
         c.execute('INSERT INTO server_list values (?)', (server,))
@@ -147,17 +162,21 @@ def notify_new_backend(servers):
 
 def bootup_tier1(counts, servers, backends):
     setup_db_tier1(counts, servers, backends)
-    retrieve_startup_info(servers, backends, counts, True)
+    retrieve_startup_info(servers, backends, counts, TIER1_DB)
     notify_new_server(servers)
 
 
 def bootup_tier2(counts, servers, backends):
     setup_db_tier2(servers)
-    retrieve_startup_info(servers, backends, counts, False)
+    retrieve_startup_info(servers, backends, counts, TIER2_DB)
     notify_new_backend(servers)
 
 
-def retrieve_startup_info(servers, backends, counts, tier1):
+def bootup_camera(servers):
+    retrieve_startup_info(servers, set(), {}, SENSOR_DB)
+
+
+def retrieve_startup_info(servers, backends, counts, db):
     unvisited_servers = servers.copy()
     visited_servers = set()
     while len(unvisited_servers) > 0:
@@ -173,7 +192,7 @@ def retrieve_startup_info(servers, backends, counts, tier1):
                     merge_dicts(counts, startup_info['counts'])
 
                     for new_server in startup_info['servers']:
-                        save_server(new_server, tier1)
+                        save_server(new_server, db)
                         if new_server not in visited_servers:
                             unvisited_servers.add(new_server)
                 else:
