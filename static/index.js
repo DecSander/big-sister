@@ -91,7 +91,7 @@ function refresh() {
     type: 'GET',
     success: function(data) {
       all_data = data;
-      if (Object.keys(all_data).length !== 0) {
+      if (Object.keys(all_data).length !== 0 && current_room === null) {
         current_room = Object.keys(all_data)[0];
         localStorage['current_room'] = current_room;
       }
