@@ -82,6 +82,10 @@ function createDropdown(data) {
 }
 
 function refresh() {
+  $('#preloader').show();
+  $('#room-id').text('');
+  $('#room-count').text('');
+  $('#room-time').text('');
   $.ajax({
     url: '/counts',
     type: 'GET',
