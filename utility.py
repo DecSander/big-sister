@@ -6,7 +6,6 @@ from const import MY_IP, basewidth, TIMEOUT, TIER1_DB, TIER2_DB, SENSOR_DB
 import json
 
 if sys.argv[0] != 'camera.py':
-    print('A')
     import boto3
     from PIL import Image
     import re
@@ -328,7 +327,7 @@ def require_files(file_types):
     def real_decorator_file(func):
         @wraps(func)
         def func_wrapper_file(*args, **kwargs):
-            file_value = request.file
+            file_value = request.files
             for arg in file_types:
                 if arg not in file_value:
                     return jsonify({'error': '{} not supplied'.format(arg)}), 400

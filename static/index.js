@@ -3,7 +3,7 @@ var current_room = null;
 
 function formatTime(time) {
   // Make a fuzzy time
-  var date = new Date(time);
+  var date = new Date(time * 1000);
   var delta = Math.round((+new Date - date) / 1000);
 
   var minute = 60,
@@ -12,18 +12,16 @@ function formatTime(time) {
       week = day * 7;
 
   var fuzzy;
-  if (delta < 30) {
-    fuzzy = 'just then.';
-  } else if (delta < minute) {
-    fuzzy = delta + ' seconds ago.';
+  if (delta < minute) {
+    fuzzy = delta + ' seconds ago';
   } else if (delta < 2 * minute) {
-    fuzzy = 'a minute ago.'
+    fuzzy = 'a minute ago'
   } else if (delta < hour) {
-    fuzzy = Math.floor(delta / minute) + ' minutes ago.';
+    fuzzy = Math.floor(delta / minute) + ' minutes ago';
   } else if (Math.floor(delta / hour) == 1) {
     fuzzy = '1 hour ago.'
   } else if (delta < day) {
-    fuzzy = Math.floor(delta / hour) + ' hours ago.';
+    fuzzy = Math.floor(delta / hour) + ' hours ago';
   } else if (delta < day * 2) {
     fuzzy = 'yesterday';
   } else {
