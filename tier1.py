@@ -23,6 +23,7 @@ def update_camera_value(camera_id, camera_count, photo_time):
 @require_files({'imagefile': 'image/jpeg'})
 @require_form({'camera_id': int, 'photo_time': float})
 def upload_file(imagefile, camera_id, photo_time):
+    print('AAAAAAAAAA')
     should_update = (camera_id not in most_recent_counts) or (most_recent_counts[camera_id]['photo_time'] < photo_time)
     if not should_update:  # We have more recent data than this for this camera
         logger.info('Received old message')
