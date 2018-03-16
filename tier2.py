@@ -1,6 +1,8 @@
 from flask import Flask, jsonify
 import os
-from utility import resize_image, bootup_tier2, handle_errors, require_files
+
+from t2utility import resize_image, bootup_tier2
+from utility import handle_errors, require_files
 from crowd_counter import count_people
 from const import MAX_MB, MB_TO_BYTES, servers
 

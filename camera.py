@@ -1,19 +1,16 @@
 #!/usr/bin/env python2
 
-import json
 import requests
 import time
 import os
-
-from utility import bootup_camera
-from const import servers
 from picamera import PiCamera
 from threading import Thread
 
+from cutility import bootup_camera
+from const import servers
 
 SERVER_URL = 'http://18.221.18.72:5000'
 server_urls = servers
-
 camera_id = 1
 
 

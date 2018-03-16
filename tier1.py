@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, send_from_directory
-from utility import temp_store, persist, bootup_tier1, get_camera_count
-from utility import process_image, validate_ip, save_server, save_backend, logger
+from t1utility import temp_store, persist, bootup_tier1, get_camera_count
+from t1utility import process_image, save_backend, logger
+from utility import validate_ip, save_server
 from utility import handle_errors, require_json, require_files, require_form, validate_regex
 from const import servers, backends, IP_REGEX
 
@@ -105,4 +106,4 @@ def send_static(path):
 
 if __name__ == "__main__":
     bootup_tier1(most_recent_counts, servers, backends)
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    app.run(host='0.0.0.0', port=80, threaded=True)
