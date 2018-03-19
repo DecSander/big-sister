@@ -18,7 +18,7 @@ regression_model = None
 
 @app.route('/', methods=['POST'])
 @handle_errors
-@require_files({'imagefile', 'image/jpeg'})
+@require_files({'imagefile': 'image/jpeg'})
 def upload_file(imagefile):
     # Check file length
     imagefile.seek(0, os.SEEK_END)
