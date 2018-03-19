@@ -1,8 +1,8 @@
 from flask import Flask, jsonify, send_from_directory
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count
 from t1utility import process_image, save_backend, logger, upload_file_to_s3
-from utility import validate_ip, save_server
-from utility import handle_errors, require_json, require_files, require_form, validate_regex
+from utility import validate_ip, save_server, validate_regex
+from decorators import handle_errors, require_json, require_files, require_form
 from const import servers, backends, IP_REGEX
 
 
