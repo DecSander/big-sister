@@ -116,9 +116,10 @@ def notify_new_server(servers):
 
 def get_camera_count(imagefile, backends):
     imagefile_contents = imagefile.read()
+    print(len(imagefile_contents))
     for backend in backends:
         try:
-            imagefile_str = StringIO(imagefile_contents)
+            imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')
             result = requests.post('http://{}:5001'.format(backend), files={'imagefile': imagefile_str})
             if result.status_code == 200:
                 try:
@@ -126,6 +127,8 @@ def get_camera_count(imagefile, backends):
                 except ValueError:  # Received invalid JSON, try next one
                     logger.warning('Failed to retrieve camera count from {}: {}'.format(backend, result.text))
             # Else, we got an error message, try next one
+            else:
+                print(result.text)
         except requests.exceptions.ConnectionError:
             logger.info('Failed to retrieve camera count from {}: Couldn\'t connect to IP address'.format(backend))
 

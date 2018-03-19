@@ -1,6 +1,7 @@
 from flask import jsonify, request
 import traceback
 from functools import wraps
+import re
 
 
 def handle_errors(func):
@@ -66,6 +67,7 @@ def require_files(file_types):
         @wraps(func)
         def func_wrapper_file(*args, **kwargs):
             file_value = request.files
+            print(file_value)
             for arg in file_types:
                 if arg not in file_value:
                     return jsonify({'error': '{} not supplied'.format(arg)}), 400

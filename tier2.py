@@ -18,7 +18,7 @@ regression_model = None
 
 @app.route('/', methods=['POST'])
 @handle_errors
-@require_files({'imagefile', 'image/jpeg'})
+@require_files({'imagefile': 'image/jpeg'})
 def upload_file(imagefile):
     # Check file length
     imagefile.seek(0, os.SEEK_END)
@@ -51,5 +51,5 @@ def create_model():
 
 if __name__ == "__main__":
     regression_model = create_model()
-    bootup_tier2({}, servers, [])
+    bootup_tier2({}, servers, set())
     app.run(host='0.0.0.0', port=5001)
