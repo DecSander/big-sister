@@ -126,6 +126,8 @@ def get_camera_count(imagefile, backends):
                 except ValueError:  # Received invalid JSON, try next one
                     logger.warning('Failed to retrieve camera count from {}: {}'.format(backend, result.text))
             # Else, we got an error message, try next one
+            else:
+                print(result.text)
         except requests.exceptions.ConnectionError:
             logger.info('Failed to retrieve camera count from {}: Couldn\'t connect to IP address'.format(backend))
 
