@@ -3,8 +3,6 @@ import requests
 import logging
 import json
 import re
-import traceback
-from functools import wraps
 
 from const import MY_IP, TIMEOUT
 
