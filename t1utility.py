@@ -116,9 +116,10 @@ def notify_new_server(servers):
 
 def get_camera_count(imagefile, backends):
     imagefile_contents = imagefile.read()
+    print(len(imagefile_contents))
     for backend in backends:
         try:
-            imagefile_str = StringIO(imagefile_contents)
+            imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')
             result = requests.post('http://{}:5001'.format(backend), files={'imagefile': imagefile_str})
             if result.status_code == 200:
                 try:
