@@ -130,11 +130,11 @@ def get_camera_count(imagefile, backends):
             logger.info('Failed to retrieve camera count from {}: Couldn\'t connect to IP address'.format(backend))
 
 
-def upload_file_to_s3(file, camera_id, photo_time):
+def upload_file_to_s3(file, camera_id, photo_time, camera_count):
     s3_client.upload_fileobj(
         file,
         'cc-proj',
-        '{}_{}.jpeg'.format(camera_id, int(photo_time * 1000)),
+        '{}_{}_{}.jpeg'.format(camera_id, int(photo_time * 1000), camera_count),
         ExtraArgs={"ContentType": 'image/jpeg'}
     )
 
