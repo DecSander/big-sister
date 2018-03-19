@@ -51,5 +51,5 @@ def create_model():
 
 if __name__ == "__main__":
     regression_model = create_model()
-    bootup_tier2({}, servers, [])
+    bootup_tier2({}, servers, set())
     app.run(host='0.0.0.0', port=5001)
