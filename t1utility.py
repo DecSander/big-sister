@@ -116,7 +116,6 @@ def notify_new_server(servers):
 
 def get_camera_count(imagefile, backends):
     imagefile_contents = imagefile.read()
-    print(len(imagefile_contents))
     for backend in backends:
         try:
             imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')

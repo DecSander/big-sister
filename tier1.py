@@ -53,8 +53,6 @@ def new_server(ip_address):
 @require_json({'ip_address': str})
 @validate_regex({'ip_address': IP_REGEX})
 def new_backend(ip_address):
-    if validate_ip(ip_address):
-        return jsonify({'error': 'Invalid IP Address'}), 400
     backends.add(ip_address)
     save_backend(ip_address)
     return jsonify(True)
