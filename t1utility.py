@@ -133,12 +133,15 @@ def get_camera_count(imagefile, backends):
 
 
 def upload_file_to_s3(file, camera_id, photo_time, camera_count):
-    s3_client.upload_fileobj(
-        file,
-        'cc-proj',
-        '{}_{}_{}.jpeg'.format(camera_id, int(photo_time * 1000), camera_count),
-        ExtraArgs={"ContentType": 'image/jpeg'}
-    )
+    try:
+        s3_client.upload_file(
+            '{}_{}_{}.jpeg'.format(camera_id, int(photo_time * 1000), camera_count),
+            file,
+            'cc-proj',
+            ExtraArgs={"ContentType": 'image/jpeg'}
+        )
+    except Exception as e:
+        print e
 
 
 def bootup_tier1(counts, servers, backends):
