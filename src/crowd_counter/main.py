@@ -117,7 +117,7 @@ def run_inference_for_single_image(image, graph):
   return output_dict
 
 
-def count_people(image, humanity_threshold=0.35):
+def count_people(image, humanity_threshold=0.35, show_plot=False):
   # the array based representation of the image will be used later in order to prepare the
   # result image with boxes and labels on it.
   image_np = load_image_into_numpy_array(image)
@@ -133,14 +133,21 @@ def count_people(image, humanity_threshold=0.35):
       instance_masks=output_dict.get('detection_masks'),
       use_normalized_coordinates=True,
       line_thickness=8)
+  if show_plot:
+    from matplotlib import pyplot as plt
+    plt.figure(figsize=IMAGE_SIZE)
+    plt.imshow(image_np)
+    plt.show()
+    plt.savefig("detected.jpg")
 
   num_humans = 0
   for object_id, probability in zip(output_dict['detection_classes'], output_dict['detection_scores']):
     if object_id == 1 and probability > humanity_threshold:
       num_humans += 1
 
+  print "\n"
   return num_humans
 
 
 if __name__ == "__main__":
-  print count_people(sys.argv[1])
+  print count_people(Image.open(sys.argv[1]), show_plot=True)
