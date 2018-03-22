@@ -10,7 +10,7 @@ from decorators import handle_errors, require_files
 from crowd_counter import count_people
 from const import MAX_MB, MB_TO_BYTES, servers
 
-
+DATA_DIR = "../data/images/labelled/"
 
 app = Flask(__name__)
 
@@ -30,7 +30,7 @@ def upload_file(imagefile):
 
     resized = resize_image(imagefile)
     model_count = count_people(resized)
-    prediction = regression_model.predict(model_count)[0][0]
+    prediction = int(regression_model.predict(model_count)[0][0])
     return jsonify(prediction)
 
 def create_model():
@@ -38,13 +38,18 @@ def create_model():
         with open("regression_model.pkl", 'r') as f:
             return pickle.loads(f.read())
 
-    data = np.array([1, 2, 3, 4]).reshape((4, 1))
-    expected = np.array([1, 2, 3, 4]).reshape((4, 1))
+    files = os.listdir(DATA_DIR)
+
+    predicted, expected = zip(*[map(float, f.split("-")[:2]) for f in files])
+    predicted = np.array(predicted).reshape(len(predicted), 1)
+    expected = np.array(predicted).reshape(len(expected), 1)
+
     model = LinearRegression()
-    model.fit(data, expected)
+    model.fit(predicted, expected)
 
     with open("regression_model.pkl", 'w') as f:
         f.write(pickle.dumps(model))
+    print model.predict(500)
     return model
 
 
