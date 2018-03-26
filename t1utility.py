@@ -20,7 +20,7 @@ def setup_db_tier1(counts, servers, backends):
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
 
-    c.execute('CREATE TABLE IF NOT EXISTS camera_counts (camera_id INTEGER UNIQUE, camera_count INTEGER, photo_time REAL);')
+    c.execute('CREATE TABLE IF NOT EXISTS camera_counts (camera_id INTEGER, camera_count INTEGER, photo_time REAL);')
     c.execute('CREATE TABLE IF NOT EXISTS server_list (ip_address TEXT UNIQUE);')
     c.execute('CREATE TABLE IF NOT EXISTS backend_list (ip_address TEXT UNIQUE);')
     conn.commit()
@@ -52,13 +52,25 @@ def setup_db_tier1(counts, servers, backends):
 def persist(camera_id, camera_count, photo_time):
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
-    try:
-        c.execute('INSERT INTO camera_counts values (?, ?, ?);', (camera_id, camera_count, photo_time))
-        conn.commit()
-    except sqlite3.IntegrityError:  # Indicates that camera_id is already in the database
-        c.execute('UPDATE camera_counts SET camera_count = ?, photo_time = ?;', (camera_count, photo_time))
-        conn.commit()
+    c.execute('INSERT INTO camera_counts values (?, ?, ?);', (camera_id, camera_count, photo_time))
+    conn.commit()
     conn.close()
+
+
+def get_counts_at_time(time, camera_id=None):
+    conn = sqlite3.connect(TIER1_DB)
+    c = conn.cursor()
+    if camera_id is None:
+        c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts where photo_time in (SELECT max(photo_time) FROM camera_counts GROUP BY camera_id WHERE photo_time < ?) order by photo_time desc', (time,))
+    else:
+        c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts WHERE camera_id = ? AND photo_time < ?;', (camera_id, time))
+    camera_rows = c.fetchall()
+    conn.close()
+
+    if len(camera_rows) == 0:
+        return None
+    else:
+        return camera_rows[-1]
 
 
 def send_to_other_servers(servers, camera_id, camera_count, photo_time):
