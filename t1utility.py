@@ -61,7 +61,7 @@ def get_counts_at_time(time, camera_id=None):
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
     if camera_id is None:
-        c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts where photo_time in (SELECT max(photo_time) FROM camera_counts GROUP BY camera_id WHERE photo_time < ?) order by photo_time desc', (time,))
+        c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts where photo_time in (SELECT max(photo_time) FROM camera_counts WHERE photo_time < ? GROUP BY camera_id) order by photo_time desc', (time,))
     else:
         c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts WHERE camera_id = ? AND photo_time < ?;', (camera_id, time))
     camera_rows = c.fetchall()
