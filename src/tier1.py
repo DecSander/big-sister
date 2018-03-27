@@ -30,9 +30,8 @@ def upload_file(imagefile, camera_id, photo_time):
         return jsonify(False)
 
     camera_count = get_camera_count(imagefile, backends)
-    valid_camera_count = camera_count is not None
 
-    if valid_camera_count:
+    if camera_count is not None:
         process_image(servers, most_recent_counts, camera_count, camera_id, photo_time)
         upload_file_to_s3(imagefile, camera_id, photo_time, camera_count)
     return jsonify(valid_camera_count)
