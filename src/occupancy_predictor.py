@@ -12,18 +12,17 @@ logging.basicConfig(filename='occupancy_predictor.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
 logger = logging.getLogger('occ_pred')
 
-HISTORY_UPDATE_TIME = 60*60*24 # Daily
-
+HISTORY_UPDATE_TIME = 60 * 60 * 24  # Daily
 app = Flask(__name__)
-
 history = None
+
 
 @app.route('/')
 @require_form({'day': int, 'hour': int})
 @handle_errors
 def predict_occupancy(day, hour):
     if not history:
-        return jsonify({"error" : "History is not initialized, cannot infer"}), 400
+        return jsonify({"error": "History is not initialized, cannot infer"}), 400
 
     prediction = 0
     x = 0.5
@@ -33,7 +32,7 @@ def predict_occupancy(day, hour):
         s += x
         x /= 2
 
-    return jsonify(prediction/s)
+    return jsonify(prediction / s)
 
 
 def get_history():
@@ -50,6 +49,7 @@ def get_history():
                 logger.info(data.text)
         except requests.exceptions.ConnectionError:
             logger.info("server" + str(server) + " could not connect")
+
 
 def history_loop():
     while True:
