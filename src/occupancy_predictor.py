@@ -28,7 +28,7 @@ def mean(l):
     return sum(l) / len(l)
 
 
-@app.route('/')
+@app.route('/', methods=['POST'])
 @require_form({'timestamp': int, 'camera_id': int})
 @handle_errors
 def predict_occupancy(timestamp, camera_id):

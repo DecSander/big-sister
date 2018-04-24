@@ -1,9 +1,9 @@
 from flask import Flask, jsonify, send_from_directory, request
-from t1utility import temp_store, persist, bootup_tier1, get_camera_count
+from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
-from const import servers, backends, IP_REGEX
+from const import servers, backends, IP_REGEX, occupancy_predictors
 
 
 app = Flask(__name__, static_url_path='')
@@ -85,6 +85,15 @@ def current_counts():
 def room_count(room):
     if room in most_recent_counts:
         return jsonify(most_recent_counts[room])
+    else:
+        return jsonify({'error': 'Invalid room'}), 400
+
+
+@app.route("/counts/<room>/<timestamp>", methods=['GET'])
+@handle_errors
+def predict_room(room, timestamp):
+    if room in most_recent_counts:
+        return jsonify(get_prediction(room, timestamp, occupancy_predictors))
     else:
         return jsonify({'error': 'Invalid room'}), 400
 
