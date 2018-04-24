@@ -100,8 +100,12 @@ function refresh() {
 }
 
 function getPrediction() {
+  var date_selected = $('#date').val();
+  var time_selected = $('#time').val();
+  console.log(date_selected, time_selected)
+  var epoch_selected = new Date(date_selected + ' ' + time_selected);
   $.ajax({
-    url: '/counts/' + '' + '',
+    url: '/counts/' + String(current_room) + '/' + String(epoch_selected.getTime() / 1000),
     type: 'GET',
     success: function(data) {
       if (data === null) $('#prediction').text('Expected Occupancy: ' + String(data));
