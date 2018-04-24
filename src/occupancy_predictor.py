@@ -83,13 +83,14 @@ def get_history():
                         else:
                             new_hist[c_id].append((count, timestamp))
 
-                    history = {k:sorted(v, key=v[1]) for k, v in new_hist.iteritems()}
+                    history = {k:sorted(v, key=lambda x:x[1]) for k, v in new_hist.iteritems()}
                     print history
                 except ValueError:
                     logger.info("Invalid JSON returned")
             else:
                 logger.info(data.text)
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.ConnectionError as e:
+            print e
             logger.info("server " + str(server) + " could not connect")
 
 
