@@ -156,6 +156,19 @@ def get_camera_count(imagefile, backends):
         except requests.exceptions.ConnectionError:
             logger.info('Failed to retrieve camera count from {}: Couldn\'t connect to IP address'.format(backend))
 
+def get_prediction(camera_id, timestamp, occupancy_predictors):
+    payload = {"camera_id": camera_id, "timestamp": timestamp}
+    for oc in occupancy_predictors:
+        try:
+            response = requests.post(oc, payload=payload)
+            if response.status_code == 200:
+                return json.loads(response.text)
+            elif response.status_code == 204:
+                return None
+        except:
+            logger.info('Failed to retrieve camera count from {}'.format(oc))
+    return None
+
 
 def upload_file_to_s3(file, camera_id, photo_time, camera_count):
     try:

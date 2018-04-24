@@ -14,10 +14,12 @@ logging.basicConfig(filename='occupancy_predictor.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
 logger = logging.getLogger('occ_pred')
 
-HISTORY_UPDATE_TIME = 60 * 60 * 24  # Daily
 
 SECONDS_PER_HOUR = 60 * 60
 SECONDS_PER_WEEK = SECONDS_PER_HOUR * 24 * 7
+
+HISTORY_UPDATE_TIME = SECONDS_PER_HOUR * 24  # Daily
+HISTORY_UPDATE_TIME = 5
 
 app = Flask(__name__)
 history = None
@@ -28,7 +30,7 @@ def mean(l):
     return sum(l) / len(l)
 
 
-@app.route('/')
+@app.route('/', methods=['POST'])
 @require_form({'timestamp': int, 'camera_id': int})
 @handle_errors
 def predict_occupancy(timestamp, camera_id):
@@ -65,8 +67,10 @@ def predict_occupancy(timestamp, camera_id):
 
 
 def get_history():
+    print "getting history"
     global history
     for server in servers:
+        print "trying: ", server
         try:
             data = requests.get('http://{}/history'.format(server))
             if data.status_code == 200:
@@ -79,13 +83,15 @@ def get_history():
                         else:
                             new_hist[c_id].append((count, timestamp))
 
-                    history = {k:sorted(v, key=v[1]) for k, v in new_hist.iteritems()}
+                    history = {k:sorted(v, key=lambda x:x[1]) for k, v in new_hist.iteritems()}
+                    print history
                 except ValueError:
                     logger.info("Invalid JSON returned")
             else:
                 logger.info(data.text)
-        except requests.exceptions.ConnectionError:
-            logger.info("server" + str(server) + " could not connect")
+        except requests.exceptions.ConnectionError as e:
+            print e
+            logger.info("server " + str(server) + " could not connect")
 
 
 def history_loop():
