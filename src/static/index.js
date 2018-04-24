@@ -66,7 +66,7 @@ function getNewRoom(room_id) {
 
 function createDropdown(data) {
   var optionString = data.map(function(key) {
-    return '<li className onClick="getNewRoom(' + key + ')"">' + key + '</li>';
+    return '<li class="teal lighten-2 orange-text" onClick="getNewRoom(' + key + ')""><a href="#!">' + key + '</a></li>';
   }).join('');
   $('#dropdown1').html(optionString);
 
@@ -74,10 +74,7 @@ function createDropdown(data) {
     inDuration: 300,
     outDuration: 225,
     hover: false, // Activate on hover
-    gutter: 0, // Spacing from edge
-    belowOrigin: false, // Displays dropdown below the button
     alignment: 'left', // Displays dropdown with edge aligned to the left of button
-    stopPropagation: false // Stops event propagation
   });
 }
 
@@ -102,8 +99,22 @@ function refresh() {
   });
 }
 
+function getPrediction() {
+  $.ajax({
+    url: '/counts/' + '' + '',
+    type: 'GET',
+    success: function(data) {
+      if (data === null) $('#prediction').text('Expected Occupancy: ' + String(data));
+    },
+    error: console.error
+  });
+}
+
 
 $(document).ready(function() {
+  $('#date').datepicker();
+  $('#time').timepicker();
+
   if (localStorage.getItem('room_id') !== null) {
     var room_id = localStorage.getItem('room_id');
     getNewRoom(room_id);
