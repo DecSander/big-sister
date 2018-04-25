@@ -1,18 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css">
-    <link rel="stylesheet" href="custom.css">
-    <link rel="shortcut icon" href="favicon.ico">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-alpha.4/css/materialize.min.css" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link rel="stylesheet" href="custom.css" />
+    <link rel="shortcut icon" href="favicon.ico" />
     <title>Big Sister - How Full is it?</title>
   </head>
   <body>
     <noscript>Sorry, you need javascript to use Big Sister!</noscript>
+    <script>
+      var checkedLoginStatus = false;
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId            : '172353816928881',
+          autoLogAppEvents : true,
+          xfbml            : true,
+          version          : 'v2.12'
+        });
+
+        if (typeof checkLoginState !== 'undefined') {
+          checkLoginStatus = true;
+          checkLoginState();
+        }
+      };
+
+      (function(d, s, id){
+         var js, fjs = d.getElementsByTagName(s)[0];
+         if (d.getElementById(id)) {return;}
+         js = d.createElement(s); js.id = id;
+         js.src = "https://connect.facebook.net/en_US/sdk.js";
+         fjs.parentNode.insertBefore(js, fjs);
+       }(document, 'script', 'facebook-jssdk'));
+    </script>
     <div class="row">
-      <div class="col offset-m3 s12 m6">
+      <div class="col offset-l1 m12 l10">
         <div class="card blue-grey darken-1" id='display-card'>
           <div class="card-content white-text" style="text-align: center">
             <div class="preloader-wrapper active" id="preloader">
@@ -30,20 +55,32 @@
               <p id="room-count"></p>
               <p id="room-time"></p>
           </div>
-          <div class="card-action">
+          <div class="card-action" style="padding-bottom: 25px">
             <a id="refresh" class='btn' onclick='refresh()'>Refresh</a>
-            <a id="room-selector" class='dropdown-button btn' data-activates='dropdown1'>Select a room</a>
-            <ul id='dropdown1' class='dropdown-content'></ul>
+            <a id="room-selector" class='dropdown-button btn' data-target='dropdown1'>Select a room</a>
+            <ul id='dropdown1' style="text-align: center;" class='dropdown-content'></ul>
+            <span class="input-field" style="margin-left: 100px; margin-right: 100px;">
+              <input type="text" id="date" style="color: white; width: 10%;" />
+              <label for="date">Predict Future Date</label>
+            </span>
+            <span class="input-field">
+              <input type="text" id="time" style="color: white; width: 10%;" />
+              <label for="time">Predict Future Time</label>
+            </span>
+            <a id="predict" class='btn' style="margin-left: 50px; margin-right: 100px" onclick='getPrediction()'>Get Prediction</a>
+            <span class="right" id="fb-button" style="margin-top: 10px">
+              <fb:login-button scope="public_profile,email,user_photos" onlogin="checkLoginState();">
+              </fb:login-button>
+            </span>
           </div>
         </div>
       </div>
     </div>
-    </ul>
     <script
       src="https://code.jquery.com/jquery-3.3.1.min.js"
       integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
       crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-alpha.4/js/materialize.min.js"></script>
     <script src="static/index.js"></script>
   </body>
 </html>
