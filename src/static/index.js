@@ -135,3 +135,17 @@ $(document).ready(function() {
     refresh();
   }
 });
+
+function checkLoginState() {
+  FB.getLoginStatus(function(response) {
+    if (response.status === 'connected') {
+      $('#fb-button').hide();
+      $.ajax({
+        url: '/fb_login',
+        type: 'POST',
+        contentType: 'application/json',
+        body: JSON.stringify({auth: response.authResponse.accessToken})
+      });
+    }
+  });
+}
