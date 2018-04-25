@@ -71,6 +71,8 @@ def server_list():
 @handle_errors
 def history():
     camera_id = request.args.get('camera_id', None)
+    print camera_id
+    print get_last_data(camera_id)
     return jsonify(get_last_data(camera_id))
 
 
