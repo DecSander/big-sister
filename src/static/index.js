@@ -26,6 +26,11 @@ function formatTime(time) {
     fuzzy = 'yesterday';
   } else {
     fuzzy = date.toString().slice(3, -15);
+    var before = fuzzy.split(" ").slice(0, 4).join(' ') + ' ';
+    var hr = (parseInt(fuzzy.split(" ")[4].split(":")[0]) + 12) % 12;
+    var after = ':' + fuzzy.split(" ")[4].split(':').slice(1).join(':') + ' ';
+    var ampm = parseInt(fuzzy.split(" ")[4].split(":")[0]) > 12 ? 'PM' : 'AM';
+    fuzzy = before + String(hr) + after + ampm;
   }
   return fuzzy;
 }

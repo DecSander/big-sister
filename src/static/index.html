@@ -55,17 +55,16 @@
             <a id="refresh" class='btn' onclick='refresh()'>Refresh</a>
             <a id="room-selector" class='dropdown-button btn' data-target='dropdown1'>Select a room</a>
             <ul id='dropdown1' style="text-align: center;" class='dropdown-content'></ul>
-            <div class="right" id="prediction" style="margin-right: 30px; margin-top: 8px">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</div>
-            <a id="refresh" class='btn right' style="margin-left: 50px" onclick='getPrediction()'>Get Prediction</a>
-            <div class="right input-field" style="margin-top: -5px;">
-              <input type="text" id="time" style="color: white" />
-              <label for="time">Predict Future Time</label>
-            </div>
-            <div class="right input-field" style="margin-right: 100px; margin-top: -5px">
-              <input type="text" id="date" style="color: white" />
+            <span class="input-field" style="margin-left: 100px; margin-right: 100px;">
+              <input type="text" id="date" style="color: white; width: 10%;" />
               <label for="date">Predict Future Date</label>
-            </div>
-            <span id="fb-button" style="margin-left: 50px">
+            </span>
+            <span class="input-field">
+              <input type="text" id="time" style="color: white; width: 10%;" />
+              <label for="time">Predict Future Time</label>
+            </span>
+            <a id="predict" class='btn' style="margin-left: 50px; margin-right: 100px" onclick='getPrediction()'>Get Prediction</a>
+            <span class="right" id="fb-button" style="margin-top: 10px">
               <fb:login-button scope="public_profile,email,user_photos" onlogin="checkLoginState();">
               </fb:login-button>
             </span>
