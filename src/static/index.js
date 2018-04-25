@@ -154,3 +154,8 @@ function checkLoginState() {
     }
   });
 }
+
+if (!checkedLoginStatus && typeof FB !== 'undefined') {
+  checkedLoginStatus = true;
+  checkLoginState();
+}

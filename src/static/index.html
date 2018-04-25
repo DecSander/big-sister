@@ -13,6 +13,7 @@
   <body>
     <noscript>Sorry, you need javascript to use Big Sister!</noscript>
     <script>
+      var checkedLoginStatus = false;
       window.fbAsyncInit = function() {
         FB.init({
           appId            : '172353816928881',
@@ -21,7 +22,10 @@
           version          : 'v2.12'
         });
 
-        checkLoginState();
+        if (typeof checkLoginState !== 'undefined') {
+          checkLoginStatus = true;
+          checkLoginState();
+        }
       };
 
       (function(d, s, id){
