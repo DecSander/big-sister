@@ -6,7 +6,7 @@ import json
 import boto3
 
 from utility import retrieve_startup_info
-from const import TIER1_DB, MY_IP, TIMEOUT
+from const import TIER1_DB, MY_IP, TIMEOUT, FB_APP_ID, FB_APP_SECRET
 
 logging.basicConfig(filename='t1.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
@@ -63,7 +63,10 @@ def get_counts_at_time(time, camera_id=None):
     if camera_id is None:
         c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts where photo_time <= (SELECT max(photo_time) FROM camera_counts WHERE photo_time < ? GROUP BY camera_id) order by photo_time desc;', (time,))
     else:
-        c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts WHERE camera_id = ? AND photo_time <= ?;', (camera_id, time))
+        c.execute(
+            'SELECT camera_id, camera_count, photo_time FROM camera_counts WHERE camera_id = ? AND photo_time <= ?;',
+            (camera_id,
+             time))
     camera_rows = c.fetchall()
     conn.close()
 
@@ -79,7 +82,10 @@ def get_last_data(camera_id=None):
     if camera_id is None:
         c.execute("SELECT * FROM camera_counts WHERE datetime(photo_time, 'unixepoch', 'localtime') > datetime('now', '-28 days');")
     else:
-        c.execute("SELECT * FROM camera_counts WHERE datetime(photo_time, 'unixepoch', 'localtime') > datetime('now', '-28 days') AND camera_id = ?;", (camera_id,))
+        c.execute(
+            "SELECT * FROM camera_counts WHERE datetime(photo_time, 'unixepoch', 'localtime') > datetime('now', '-28 days') AND camera_id = ?;",
+            (camera_id,
+             ))
     camera_rows = c.fetchall()
     conn.close()
 
@@ -156,6 +162,7 @@ def get_camera_count(imagefile, backends):
         except requests.exceptions.ConnectionError:
             logger.info('Failed to retrieve camera count from {}: Couldn\'t connect to IP address'.format(backend))
 
+
 def get_prediction(camera_id, timestamp, occupancy_predictors):
     payload = {"camera_id": camera_id, "timestamp": timestamp}
     for oc in occupancy_predictors:
@@ -178,6 +185,23 @@ def upload_file_to_s3(file, camera_id, photo_time, camera_count):
             'cc-proj',
             ExtraArgs={"ContentType": 'image/jpeg'}
         )
+    except Exception as e:
+        print e
+
+
+def fb_get_long_lived_token(short_lived_token):
+    url = 'https://graph.facebook.com/oauth/access_token'
+    params = {
+        'grant_type': 'fb_exchange_token',
+        'client_id': FB_APP_ID,
+        'client_secret': FB_APP_SECRET,
+        'fb_exchange_token': short_lived_token,
+    }
+    try:
+        result = requests.get(url, params)
+        if result.status_code != 200:
+            print result.json()
+        return result.json()['access_token']
     except Exception as e:
         print e
 

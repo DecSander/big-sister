@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, send_from_directory, request
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
+from t1utility import fb_get_long_lived_token
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
 from const import servers, backends, IP_REGEX, occupancy_predictors
@@ -102,6 +103,14 @@ def predict_room(room, timestamp):
 @handle_errors
 def rooms_list():
     return jsonify(most_recent_counts.keys())
+
+
+@app.route('/fb_login', methods=['POST'])
+@handle_errors
+@require_json({'fb_id': str, 'fb_token': str})
+def save_user_token():
+    # Get long-lived token
+    token = fb_get_long_lived_token(fb_token)
 
 
 @app.route('/', methods=['GET'])
