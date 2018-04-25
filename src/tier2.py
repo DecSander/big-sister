@@ -6,7 +6,7 @@ import pickle
 import numpy as np
 
 from t2utility import resize_image, bootup_tier2
-from decorators import handle_errors, require_files
+from decorators import handle_errors, require_files, require_json
 from crowd_counter import count_people
 from const import MAX_MB, MB_TO_BYTES, servers
 
@@ -15,6 +15,7 @@ DATA_DIR = "../data/images/labelled/"
 app = Flask(__name__)
 
 regression_model = None
+
 
 @app.route('/', methods=['POST'])
 @handle_errors
@@ -32,6 +33,14 @@ def upload_file(imagefile):
     model_count = count_people(resized)
     prediction = int(regression_model.predict(model_count)[0][0])
     return jsonify(prediction)
+
+
+@app.route('/new_user', methods=['POST'])
+@handle_errors
+@requre_json({'fb_id': str, 'fb_long_token': str})
+def create_user():
+    raise Exception("TODO")
+
 
 def create_model():
     if os.path.exists("regression_model.pkl"):
@@ -51,7 +60,6 @@ def create_model():
         f.write(pickle.dumps(model))
     print model.predict(500)
     return model
-
 
 
 if __name__ == "__main__":

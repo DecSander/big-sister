@@ -189,13 +189,13 @@ def upload_file_to_s3(file, camera_id, photo_time, camera_count):
         print e
 
 
-def fb_get_long_lived_token(short_lived_token):
+def fb_get_long_lived_token(fb_short_token):
     url = 'https://graph.facebook.com/oauth/access_token'
     params = {
         'grant_type': 'fb_exchange_token',
         'client_id': FB_APP_ID,
         'client_secret': FB_APP_SECRET,
-        'fb_exchange_token': short_lived_token,
+        'fb_exchange_token': fb_short_token,
     }
     try:
         result = requests.get(url, params)
@@ -204,6 +204,18 @@ def fb_get_long_lived_token(short_lived_token):
         return result.json()['access_token']
     except Exception as e:
         print e
+
+
+def forward_new_user(backends, fb_id, fb_long_token):
+    json = {'fb_id': fb_id, 'fb_long_token': fb_long_token}
+    for backend in backends:
+        try:
+            result = requests.post('http://{}:5002'.format(backend), json)
+            if result.status_code != 200:
+                print result.json()
+        except Exception as e:
+            print e
+    raise Exception("TODO")
 
 
 def bootup_tier1(counts, servers, backends):
