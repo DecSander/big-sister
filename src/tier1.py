@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, send_from_directory, request
+from flask_sslify import SSLify
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
 from t1utility import fb_get_long_lived_token, forward_new_user
@@ -8,6 +9,7 @@ from const import servers, backends, IP_REGEX, occupancy_predictors
 
 
 app = Flask(__name__, static_url_path='')
+sslify = SSLify(app)
 most_recent_counts = {}
 
 
@@ -72,6 +74,8 @@ def server_list():
 @handle_errors
 def history():
     camera_id = request.args.get('camera_id', None)
+    print camera_id
+    print get_last_data(camera_id)
     return jsonify(get_last_data(camera_id))
 
 
@@ -126,4 +130,4 @@ def send_static(path):
 
 if __name__ == "__main__":
     bootup_tier1(most_recent_counts, servers, backends)
-    app.run(host='0.0.0.0', port=80, threaded=True)
+    app.run(host='0.0.0.0', port=80, threaded=True, ssl_context=('../key.crt', '../key.key'))
