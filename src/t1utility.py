@@ -191,14 +191,14 @@ def upload_file_to_s3(file, camera_id, photo_time, camera_count):
 
 def fb_get_long_lived_token(fb_short_token):
     url = 'https://graph.facebook.com/oauth/access_token'
-    params = {
+    payload = {
         'grant_type': 'fb_exchange_token',
         'client_id': FB_APP_ID,
         'client_secret': FB_APP_SECRET,
         'fb_exchange_token': fb_short_token,
     }
     try:
-        result = requests.get(url, params)
+        result = requests.get(url, params=payload)
         if result.status_code != 200:
             print result.json()
         return result.json()['access_token']
@@ -206,8 +206,8 @@ def fb_get_long_lived_token(fb_short_token):
         print e
 
 
-def forward_new_user(backends, fb_id, fb_long_token):
-    json = {'fb_id': fb_id, 'fb_long_token': fb_long_token}
+def forward_new_user(backends, fb_user_id, fb_long_token):
+    json = {'fb_user_id': fb_user_id, 'fb_long_token': fb_long_token}
     for backend in backends:
         try:
             result = requests.post('http://{}:5002'.format(backend), json)
