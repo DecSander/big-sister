@@ -53,16 +53,22 @@ def bootup_tier2(counts, servers, backends):
     notify_new_backend(servers)
 
 
-def fb_get_user_photos(fb_user_id, fb_token):
+def fb_get_user_photos_encodings(fb_user_id, fb_token):
     prof_photo_endoding = fb_get_prof_photo_encoding(fb_user_id, fb_token)
+    tagged_photos_ids = fb_get_tagged_photo_ids(fb_user_id, fb_token)
 
     # Filter tagged photos for only the user's face
-    raise Exception('TODO')
+    user_face_encodings = [prof_photo_endoding]
+    for i in tagged_photos_ids:
+        encodings = fb_photo_id_to_encodings(i, fb_token)
+        if len(encodings) == 0:
+            continue
+        distances = face_recognition.api.face_distance(encodings, prof_photo_endoding)
+        user_face_encodings.append(encodings[np.argmax(distances)])
+    return user_face_encodings
 
 
 def fb_get_prof_photo_encoding(fb_user_id, fb_token):
-    # Returns PIL.image object instead of id cause for some reason fb doesn't
-    # give you a profile pic node and just gives you the url instead
     url = 'https://graph.facebook.com/{}/picture'.format(fb_user_id)
     payload = {'width': 10000}  # arbitrarily large width for largest size
     img = url_to_image(url, payload)
@@ -71,21 +77,29 @@ def fb_get_prof_photo_encoding(fb_user_id, fb_token):
 
 
 def fb_get_tagged_photo_ids(fb_user_id, fb_token, limit=14):
-    raise Exception('TODO')
+    url = 'https://graph.facebook.com/{}/photos'.format(fb_user_id)
+    payload = {'access_token': fb_token, 'fields': 'id'}
+    try:
+        result = requests.get(url, params=payload)
+        # TODO: Check if response is OK
+        data = result.json()['data']
+        ids = map(lambda x: x['id'], data)
+        return ids
+    except Exception as e:
+        print e
 
 
 def fb_photo_id_to_encodings(fb_photo_id, fb_token):
-    url = "https://graph.facebook.com/{}/picture".format(fb_photo_id)
-    payload = None
+    url = 'https://graph.facebook.com/{}/picture'.format(fb_photo_id)
     payload = {'access_token': fb_token}
     img = url_to_image(url, payload)
     encodings = get_face_encodings(img)
     return encodings
 
 
-def url_to_image(img_url, payload=None):
+def url_to_image(url, payload=None):
     try:
-        result = requests.get(img_url, params=payload, stream=True)
+        result = requests.get(url, params=payload, stream=True)
         # TODO: Check if response is OK
         img = Image.open(result.raw)
         return img
@@ -97,13 +111,3 @@ def get_face_encodings(img):
     array = np.array(img)
     encodings = face_recognition.face_encodings(array)
     return encodings
-
-
-def main():
-    token = 'EAACEdEose0cBADaoBWxjA4gVpYoBtQiNgqupaItPb7I5ZCwbGPFseE7wyC9ZCvZBfZBkZCVw175cUquZBUosmEYnXw4afr1SPtZABt02GQpk3dBZACRPs0WYTOLZAN3CfMTbrwWbhvDLHxHjhSAiNAulaWcT8rX2hn5coDUW5I1QJoIvihsf1ZAVCdJUY6UcfV89rzeSFFJ2t7VcZBZAZCGQUpnQimw0rpyZBEnbMZD'
-    user_id = '926160917410000'
-    photo_id = '2377287488963995'
-    print len(fb_photo_id_to_encodings(photo_id, token))
-
-if __name__ == '__main__':
-    main()

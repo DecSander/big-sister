@@ -5,7 +5,7 @@ from sklearn.linear_model import LinearRegression
 import pickle
 import numpy as np
 
-from t2utility import resize_image, bootup_tier2
+from t2utility import resize_image, bootup_tier2, fb_get_user_photos_encodings
 from decorators import handle_errors, require_files, require_json
 from crowd_counter import count_people
 from const import MAX_MB, MB_TO_BYTES, servers
@@ -39,6 +39,7 @@ def upload_file(imagefile):
 @handle_errors
 @requre_json({'fb_id': str, 'fb_long_token': str})
 def create_user():
+    face_encodings = fb_get_user_photos_encodings(fb_id, fb_long_token)
     raise Exception("TODO")
 
 
