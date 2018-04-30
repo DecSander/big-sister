@@ -54,16 +54,16 @@ def bootup_tier2(counts, servers, backends):
 
 
 def fb_get_user_photos_encodings(fb_user_id, fb_token):
-    prof_photo_endoding = fb_get_prof_photo_encoding(fb_user_id, fb_token)
+    prof_photo_encoding = fb_get_prof_photo_encoding(fb_user_id, fb_token)
     tagged_photos_ids = fb_get_tagged_photo_ids(fb_user_id, fb_token)
 
     # Filter tagged photos for only the user's face
-    user_face_encodings = [prof_photo_endoding]
+    user_face_encodings = [prof_photo_encoding]
     for i in tagged_photos_ids:
         encodings = fb_photo_id_to_encodings(i, fb_token)
         if len(encodings) == 0:
             continue
-        distances = face_recognition.api.face_distance(encodings, prof_photo_endoding)
+        distances = face_recognition.api.face_distance(encodings, prof_photo_encoding)
         user_face_encodings.append(encodings[np.argmax(distances)])
     return user_face_encodings
 
