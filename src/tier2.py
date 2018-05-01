@@ -5,7 +5,8 @@ from sklearn.linear_model import LinearRegression
 import pickle
 import numpy as np
 
-from t2utility import resize_image, bootup_tier2, fb_get_user_photos_encodings
+from t2utility import resize_image, bootup_tier2, persist_user, compare_all
+from t2utility import fb_get_user_name, fb_get_user_photos_encodings
 from decorators import handle_errors, require_files, require_json
 from crowd_counter import count_people
 from const import MAX_MB, MB_TO_BYTES, servers
@@ -37,10 +38,27 @@ def upload_file(imagefile):
 
 @app.route('/new_user', methods=['POST'])
 @handle_errors
-@requre_json({'fb_id': str, 'fb_long_token': str})
+@require_json({'fb_id': str, 'fb_long_token': str})
 def create_user():
+    name = fb_get_user_name(fb_id, fb_long_token)
     face_encodings = fb_get_user_photos_encodings(fb_id, fb_long_token)
-    raise Exception("TODO")
+    face_encodings_str = repr(map(lambda x: x.tostring(), face_encodings))
+    user = {
+        'fb_id': fb_id,
+        'fb_long_token': fb_long_token,
+        'name': name,
+        'face_encodings_str': face_encodings_str
+    }
+    persist_user(fb_id, fb_long_token, name, face_encodings)
+    return jsonify(user)
+
+
+@app.route('/identify_face', methods=['GET'])
+@handle_errors
+@require_json({'encoding': str})
+def identify_face():
+    user = compare_all(encoding)
+    return jsonify(user)
 
 
 def create_model():

@@ -2,7 +2,7 @@ from flask import Flask, jsonify, send_from_directory, request
 from flask_sslify import SSLify
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
-from t1utility import fb_get_long_lived_token, forward_new_user
+from t1utility import fb_get_long_lived_token, register_user, cache_sighting
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
 from const import servers, backends, IP_REGEX, occupancy_predictors
@@ -109,12 +109,24 @@ def rooms_list():
     return jsonify(most_recent_counts.keys())
 
 
+@app.route('/identify_face', methods=['GET'])
+@handle_errors
+@require_json({'time': float, 'camera_id': int, 'encoding': str})
+def identify_face():
+    face_encoding = np.fromstring(encoding)
+    user = compare_all(face_encoding)
+    if user is not None:
+        cache_sighting(time, camera_id, user['fb_id'])
+    return jsonify(user)  # Or just return jsonify(True) to confirm face received?
+
+
 @app.route('/fb_login', methods=['POST'])
 @handle_errors
 @require_json({'fb_id': str, 'fb_short_token': str})
 def save_user_token():
     fb_long_token = fb_get_long_lived_token(fb_short_token)
-    forward_new_user(backends, fb_id, fb_long_token)
+    user = register_user(backends, fb_id, fb_long_token)
+    return jsonify(user)
 
 
 @app.route('/', methods=['GET'])
