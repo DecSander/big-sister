@@ -98,9 +98,10 @@ def room_count(room):
 def predict_room(room, timestamp):
     room, timestamp = int(room), int(timestamp)
     if room in most_recent_counts:
-        data = jsonify(get_prediction(room, timestamp, occupancy_predictors))
-        if data:
-            return data
+        pred = get_prediction(room, timestamp, occupancy_predictors)
+        print pred
+        if pred:
+            return jsonify(pred)
         else:
             return "no data", 204
     else:

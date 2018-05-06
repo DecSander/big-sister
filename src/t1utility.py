@@ -160,13 +160,16 @@ def get_prediction(camera_id, timestamp, occupancy_predictors):
     payload = {"camera_id": camera_id, "timestamp": timestamp}
     for oc in occupancy_predictors:
         try:
-            response = requests.post(oc, payload=payload)
+            response = requests.post("http://" + oc, data=payload)
             if response.status_code == 200:
                 return json.loads(response.text)
             elif response.status_code == 204:
                 return None
-        except:
-            logger.info('Failed to retrieve camera count from {}'.format(oc))
+        except Exception as e:
+            logger.info('Failed to retrieve prediction from {}'.format(oc))
+            logger.info("error " + str(e))
+
+    logger.info("could not contact any occupancy predictor service")
     return None
 
 
