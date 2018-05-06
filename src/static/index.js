@@ -26,6 +26,11 @@ function formatTime(time) {
     fuzzy = 'yesterday';
   } else {
     fuzzy = date.toString().slice(3, -15);
+    var before = fuzzy.split(" ").slice(0, 4).join(' ') + ' ';
+    var hr = (parseInt(fuzzy.split(" ")[4].split(":")[0]) + 12) % 12;
+    var after = ':' + fuzzy.split(" ")[4].split(':').slice(1).join(':') + ' ';
+    var ampm = parseInt(fuzzy.split(" ")[4].split(":")[0]) > 12 ? 'PM' : 'AM';
+    fuzzy = before + String(hr) + after + ampm;
   }
   return fuzzy;
 }
@@ -66,7 +71,7 @@ function getNewRoom(room_id) {
 
 function createDropdown(data) {
   var optionString = data.map(function(key) {
-    return '<li className onClick="getNewRoom(' + key + ')"">' + key + '</li>';
+    return '<li class="teal lighten-2 orange-text" onClick="getNewRoom(' + key + ')""><a href="#!">' + key + '</a></li>';
   }).join('');
   $('#dropdown1').html(optionString);
 
@@ -74,10 +79,7 @@ function createDropdown(data) {
     inDuration: 300,
     outDuration: 225,
     hover: false, // Activate on hover
-    gutter: 0, // Spacing from edge
-    belowOrigin: false, // Displays dropdown below the button
     alignment: 'left', // Displays dropdown with edge aligned to the left of button
-    stopPropagation: false // Stops event propagation
   });
 }
 
@@ -102,8 +104,26 @@ function refresh() {
   });
 }
 
+function getPrediction() {
+  var date_selected = $('#date').val();
+  var time_selected = $('#time').val();
+  console.log(date_selected, time_selected)
+  var epoch_selected = new Date(date_selected + ' ' + time_selected);
+  $.ajax({
+    url: '/counts/' + String(current_room) + '/' + String(epoch_selected.getTime() / 1000),
+    type: 'GET',
+    success: function(data) {
+      if (data === null) $('#prediction').text('Expected Occupancy: ' + String(data));
+    },
+    error: console.error
+  });
+}
+
 
 $(document).ready(function() {
+  $('#date').datepicker();
+  $('#time').timepicker();
+
   if (localStorage.getItem('room_id') !== null) {
     var room_id = localStorage.getItem('room_id');
     getNewRoom(room_id);
@@ -120,3 +140,22 @@ $(document).ready(function() {
     refresh();
   }
 });
+
+function checkLoginState() {
+  FB.getLoginStatus(function(response) {
+    if (response.status === 'connected') {
+      $('#fb-button').hide();
+      $.ajax({
+        url: '/fb_login',
+        type: 'POST',
+        contentType: 'application/json',
+        body: JSON.stringify({auth: response.authResponse.accessToken})
+      });
+    }
+  });
+}
+
+if (!checkedLoginStatus && typeof FB !== 'undefined') {
+  checkedLoginStatus = true;
+  checkLoginState();
+}

@@ -48,6 +48,7 @@ def predict_occupancy(timestamp, camera_id):
         # Find first datapoints a week and a half hour ago
         time_start = timestamp - weeks_past * SECONDS_PER_WEEK - SECONDS_PER_HOUR/2
         time_end = timestamp - weeks_past * SECONDS_PER_WEEK + SECONDS_PER_HOUR/2
+        print time_start, time_end
         curr = bisect([x[1] for x in hist_data], time_start)
         # Iterate until an hour after
         while curr < len(hist_data) and hist_data[curr][1] < time_end:
