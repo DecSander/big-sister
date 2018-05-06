@@ -71,6 +71,8 @@ def server_list():
 @handle_errors
 def history():
     camera_id = request.args.get('camera_id', None)
+    print camera_id
+    print jsonify(get_last_data(camera_id))
     return jsonify(get_last_data(camera_id))
 
 
@@ -93,7 +95,11 @@ def room_count(room):
 @handle_errors
 def predict_room(room, timestamp):
     if room in most_recent_counts:
-        return jsonify(get_prediction(room, timestamp, occupancy_predictors))
+        data = jsonify(get_prediction(room, timestamp, occupancy_predictors))
+        if data:
+            return data
+        else:
+            return "no data", 204
     else:
         return jsonify({'error': 'Invalid room'}), 400
 

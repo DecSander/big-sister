@@ -43,7 +43,7 @@ def predict_occupancy(timestamp, camera_id):
     # Using a weighted prediction algorithm where the first week is worth 4, then 2, then 4/3, then 1, etc.
     # More recent weeks are more relevant, but we don't want the most recent week being an outlier to skew the
     # result to enormously.
-    for weeks_past in xrange(1, len(NUM_QUERY_WEEKS)+1):
+    for weeks_past in xrange(1, NUM_QUERY_WEEKS+1):
         datapoints = []
         # Find first datapoints a week and a half hour ago
         time_start = timestamp - weeks_past * SECONDS_PER_WEEK - SECONDS_PER_HOUR/2
@@ -83,7 +83,7 @@ def get_history():
                         else:
                             new_hist[c_id].append((count, timestamp))
 
-                    history = {k:sorted(v, key=lambda x:x[1]) for k, v in new_hist.iteritems()}
+                    history = {k:sorted(set(v), key=lambda x:x[1]) for k, v in new_hist.iteritems()}
                     print history
                 except ValueError:
                     logger.info("Invalid JSON returned")
