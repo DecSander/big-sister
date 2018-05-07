@@ -51,7 +51,7 @@ def setup_db_tier1(counts, servers, backends):
     conn.close()
 
 
-def persist(camera_id, camera_count, photo_time, img_id):
+def persist(camera_id, camera_count, photo_time, img_id=None):
     if img_id in all_seen_uuids:
         return
     conn = sqlite3.connect(TIER1_DB)
@@ -86,7 +86,7 @@ def get_last_data(camera_id=None):
         c.execute("SELECT * FROM camera_counts WHERE datetime(photo_time, 'unixepoch', 'localtime') > datetime('now', '-28 days') AND camera_id = ?;", (camera_id,))
     camera_rows = c.fetchall()
     conn.close()
-
+    print camera_rows
     return camera_rows
 
 
@@ -95,8 +95,8 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time):
     for server in servers:
         if MY_IP != server:
             try:
-                seen_uuid = uuid.uuid4()
-                all_seen_uuids.append(seen_uuid)
+                seen_uuid = uuid.uuid4().hex
+                all_seen_uuids.add(seen_uuid)
                 result = requests.post('http://{}/update_camera'.format(server),
                                        timeout=TIMEOUT,
                                        json={

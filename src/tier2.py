@@ -30,13 +30,16 @@ def upload_file(imagefile):
 
     resized = resize_image(imagefile)
     model_count = count_people(resized)
-    prediction = int(regression_model.predict(model_count)[0][0])
+    prediction = model_count
+    #prediction = int(regression_model.predict(model_count)[0][0])
     return jsonify(prediction)
 
 def create_model():
     if os.path.exists("regression_model.pkl"):
         with open("regression_model.pkl", 'r') as f:
-            return pickle.loads(f.read())
+            model = pickle.loads(f.read())
+            print model.predict(100)
+            return model
 
     files = os.listdir(DATA_DIR)
 
