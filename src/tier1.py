@@ -13,10 +13,10 @@ most_recent_counts = {}
 
 @app.route('/update_camera', methods=['POST'])
 @handle_errors
-@require_json({'camera_id': int, 'camera_count': int, 'photo_time': float})
-def update_camera_value(camera_id, camera_count, photo_time):
+@require_json({'camera_id': int, 'camera_count': int, 'photo_time': float, 'img_id': int})
+def update_camera_value(camera_id, camera_count, photo_time, img_id):
     if temp_store(most_recent_counts, camera_id, camera_count, photo_time):
-        persist(camera_id, camera_count, photo_time)
+        persist(camera_id, camera_count, photo_time, img_id)
     return jsonify(True)
 
 

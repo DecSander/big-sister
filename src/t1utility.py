@@ -4,6 +4,7 @@ import requests
 from StringIO import StringIO
 import json
 import boto3
+import uuid
 
 from utility import retrieve_startup_info
 from const import TIER1_DB, MY_IP, TIMEOUT
@@ -14,6 +15,7 @@ logger = logging.getLogger('t1')
 
 s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
+all_seen_uuids = set()
 
 
 def setup_db_tier1(counts, servers, backends):
@@ -49,7 +51,9 @@ def setup_db_tier1(counts, servers, backends):
     conn.close()
 
 
-def persist(camera_id, camera_count, photo_time):
+def persist(camera_id, camera_count, photo_time, img_id):
+    if img_id in all_seen_uuids:
+        return
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
     c.execute('INSERT INTO camera_counts values (?, ?, ?);', (camera_id, camera_count, photo_time))
@@ -87,15 +91,19 @@ def get_last_data(camera_id=None):
 
 
 def send_to_other_servers(servers, camera_id, camera_count, photo_time):
+    global all_seen_uuids
     for server in servers:
         if MY_IP != server:
             try:
+                seen_uuid = uuid.uuid4()
+                all_seen_uuids.append(seen_uuid)
                 result = requests.post('http://{}/update_camera'.format(server),
                                        timeout=TIMEOUT,
                                        json={
                                        'camera_id': camera_id,
                                        'camera_count': camera_count,
-                                       'photo_time': photo_time
+                                       'photo_time': photo_time,
+                                       'img_id': seen_uuid
                                        })
                 if result.status_code != 200:
                     print result.json()
