@@ -1,5 +1,4 @@
 from flask import Flask, jsonify, send_from_directory, request
-from flask_sslify import SSLify
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
 from utility import save_server
@@ -8,7 +7,7 @@ from const import servers, backends, IP_REGEX, occupancy_predictors
 
 
 app = Flask(__name__, static_url_path='')
-sslify = SSLify(app)
+
 most_recent_counts = {}
 
 
@@ -73,6 +72,7 @@ def server_list():
 @handle_errors
 def history():
     camera_id = request.args.get('camera_id', None)
+    print camera_id
     return jsonify(get_last_data(camera_id))
 
 
@@ -85,6 +85,8 @@ def current_counts():
 @app.route("/counts/<room>", methods=['GET'])
 @handle_errors
 def room_count(room):
+    print "Received room request"
+    room = int(room)
     if room in most_recent_counts:
         return jsonify(most_recent_counts[room])
     else:
@@ -94,8 +96,14 @@ def room_count(room):
 @app.route("/counts/<room>/<timestamp>", methods=['GET'])
 @handle_errors
 def predict_room(room, timestamp):
+    room, timestamp = int(room), int(timestamp)
     if room in most_recent_counts:
-        return jsonify(get_prediction(room, timestamp, occupancy_predictors))
+        pred = get_prediction(room, timestamp, occupancy_predictors)
+        print pred
+        if pred:
+            return jsonify(pred)
+        else:
+            return "no data", 204
     else:
         return jsonify({'error': 'Invalid room'}), 400
 
@@ -119,4 +127,5 @@ def send_static(path):
 
 if __name__ == "__main__":
     bootup_tier1(most_recent_counts, servers, backends)
-    app.run(host='0.0.0.0', port=80, threaded=True, ssl_context=('../key.crt', '../key.key'))
+    print(most_recent_counts)
+    app.run(host='0.0.0.0', port=80, threaded=True)
