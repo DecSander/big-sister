@@ -112,8 +112,7 @@ function getPrediction() {
     url: '/counts/' + String(current_room) + '/' + String(epoch_selected.getTime() / 1000),
     type: 'GET',
     success: function(data) {
-      console.log(String(data));
-      if (data != null) $('#prediction').text('Expected Occupancy: ' + String(data));
+      if (data != null) $('#prediction').text('Expected Occupancy: ' + String(Math.round(data)));
     },
     error: console.error
   });
