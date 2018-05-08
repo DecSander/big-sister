@@ -17,6 +17,7 @@ logger = logging.getLogger('occ_pred')
 
 SECONDS_PER_HOUR = 60 * 60
 SECONDS_PER_WEEK = SECONDS_PER_HOUR * 24 * 7
+SECONDS_PER_MONTH = SECONDS_PER_WEEK * 4
 
 HISTORY_UPDATE_TIME = SECONDS_PER_HOUR * 24  # Daily
 HISTORY_UPDATE_TIME = 1000
@@ -92,7 +93,12 @@ def get_history():
         except requests.exceptions.ConnectionError as e:
             print e
             logger.info("server " + str(server) + " could not connect")
-            
+
+    for k in unsorted_history:
+        for i, t in unsorted_history[k]:
+            if time.time() - t > SECONDS_PER_MONTH + SECONDS_PER_WEEK:
+                unsorted_history[k].remove((i,t))
+
     history = {k:sorted(set(v), key=lambda x:x[1]) for k, v in unsorted_history.iteritems()}
     print "Successfully retrieved history"
 
