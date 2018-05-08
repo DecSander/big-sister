@@ -50,7 +50,6 @@ def predict_occupancy(timestamp, camera_id):
         # Find first datapoints a week and a half hour ago
         time_start = timestamp - weeks_past * SECONDS_PER_WEEK - SECONDS_PER_HOUR/2
         time_end = timestamp - weeks_past * SECONDS_PER_WEEK + SECONDS_PER_HOUR/2
-        print time_start, time_end
         curr = bisect([x[1] for x in hist_data], time_start)
         # Iterate until an hour after
         while curr < len(hist_data) and hist_data[curr][1] < time_end:
@@ -67,6 +66,7 @@ def predict_occupancy(timestamp, camera_id):
         print "Not enough history to predict for camera", camera_id
         return jsonify(None), 204
 
+    print "Final prediction for camera", camera_id, ":", prediction/total_weight
     return jsonify(prediction / total_weight)
 
 
@@ -85,7 +85,6 @@ def get_history():
                             unsorted_history[c_id] = set([(count, timestamp)])
                         else:
                             unsorted_history[c_id].add((count, timestamp))
-                    return
                 except ValueError:
                     logger.info("Invalid JSON returned")
             else:
@@ -93,12 +92,12 @@ def get_history():
         except requests.exceptions.ConnectionError as e:
             print e
             logger.info("server " + str(server) + " could not connect")
-
+    
     for k in unsorted_history:
         for i, t in unsorted_history[k]:
             if time.time() - t > SECONDS_PER_MONTH + SECONDS_PER_WEEK:
                 unsorted_history[k].remove((i,t))
-
+    
     history = {k:sorted(set(v), key=lambda x:x[1]) for k, v in unsorted_history.iteritems()}
     print "Successfully retrieved history"
 
