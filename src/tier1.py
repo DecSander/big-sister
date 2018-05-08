@@ -115,7 +115,7 @@ def predict_room(room, timestamp):
     else:
         data = get_counts_at_time(timestamp, room)
         if data is not None:
-            return jsonify(data)
+            return jsonify(data[1])
         else:
             return "no data", 204
 
