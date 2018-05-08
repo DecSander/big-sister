@@ -172,6 +172,7 @@ def get_prediction(camera_id, timestamp, occupancy_predictors):
             if response.status_code == 200:
                 return json.loads(response.text)
             elif response.status_code == 204:
+                print "Received 204 from occupancy predictor service"
                 return None
         except Exception as e:
             logger.info('Failed to retrieve prediction from {}'.format(oc))
