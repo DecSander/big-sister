@@ -71,11 +71,9 @@ def get_history():
     print "getting history"
     global history
     for server in servers:
-        print "trying: ", server
         try:
             data = requests.get('http://{}/history'.format(server))
             if data.status_code == 200:
-                print data.text
                 try:
                     hist_db_data = json.loads(data.text)
                     new_hist = {}
@@ -86,7 +84,8 @@ def get_history():
                             new_hist[c_id].append((count, timestamp))
 
                     history = {k:sorted(set(v), key=lambda x:x[1]) for k, v in new_hist.iteritems()}
-                    print history
+                    print "Successfully retrieved history"
+                    return
                 except ValueError:
                     logger.info("Invalid JSON returned")
             else:
