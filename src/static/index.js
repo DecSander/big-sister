@@ -114,6 +114,7 @@ function getPrediction() {
     success: function(data) {
       var date_string = epoch_selected.getTime() > Date.now() ? 'Expected Occupancy: ' : 'Past Occupancy: ';
       if (data != null) $('#prediction').text(date_string + String(Math.round(data)));
+      else $('#prediction').text('No Data Available');
     },
     error: console.error
   });
