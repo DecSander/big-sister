@@ -61,17 +61,17 @@
             <ul id='dropdown1' style="text-align: center;" class='dropdown-content'></ul>
             <span class="input-field" style="margin-left: 100px; margin-right: 100px;">
               <input type="text" id="date" style="color: white; width: 10%;" />
-              <label for="date">Predict Future Date</label>
+              <label for="date">Date</label>
             </span>
             <span class="input-field">
               <input type="text" id="time" style="color: white; width: 10%;" />
-              <label for="time">Predict Future Time</label>
+              <label for="time">Time</label>
             </span>
             <a id="predict" class='btn' style="margin-left: 50px; margin-right: 100px" onclick='getPrediction()'>Get Prediction</a>
             <span class="white-text" id="prediction"></span>
             <span class="right" id="fb-button" style="margin-top: 10px">
-              <fb:login-button scope="public_profile,email,user_photos" onlogin="checkLoginState();">
-              </fb:login-button>
+            <fb:login-button scope="public_profile,email,user_photos" onlogin="checkLoginState();">
+            </fb:login-button>
             </span>
           </div>
         </div>

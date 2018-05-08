@@ -112,7 +112,8 @@ function getPrediction() {
     url: '/counts/' + String(current_room) + '/' + String(epoch_selected.getTime() / 1000),
     type: 'GET',
     success: function(data) {
-      if (data != null) $('#prediction').text('Expected Occupancy: ' + String(Math.round(data)));
+      var date_string = epoch_selected.getTime() < Date.getTime() ? 'Expected Occupancy: ' : 'Past Occupancy: ';
+      if (data != null) $('#prediction').text(date_string + String(Math.round(data)));
     },
     error: console.error
   });
