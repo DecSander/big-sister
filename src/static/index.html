@@ -55,7 +55,7 @@
               <p id="room-count"></p>
               <p id="room-time"></p>
           </div>
-          <div class="card-action white-text" style="padding-bottom: 25px">
+          <div class="card-action" style="padding-bottom: 25px">
             <a id="refresh" class='btn' onclick='refresh()'>Refresh</a>
             <a id="room-selector" class='dropdown-button btn' data-target='dropdown1'>Select a room</a>
             <ul id='dropdown1' style="text-align: center;" class='dropdown-content'></ul>
@@ -68,7 +68,7 @@
               <label for="time">Predict Future Time</label>
             </span>
             <a id="predict" class='btn' style="margin-left: 50px; margin-right: 100px" onclick='getPrediction()'>Get Prediction</a>
-            <span id="prediction"></span>
+            <span class="white-text" id="prediction"></span>
             <span class="right" id="fb-button" style="margin-top: 10px">
               <fb:login-button scope="public_profile,email,user_photos" onlogin="checkLoginState();">
               </fb:login-button>
