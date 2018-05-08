@@ -108,13 +108,13 @@ def predict_room(room, timestamp):
     if timestamp > time.time():
         pred = get_prediction(room, timestamp, occupancy_predictors)
         print "Prediction for room", room, "at", timestamp, ":", pred
-        if pred:
+        if pred is not None:
             return jsonify(pred)
         else:
             return "no data", 204
     else:
         data = get_past_time(room, timestamp)
-        if data:
+        if data is not None:
             return jsonify(data)
         else:
             return "no data", 204
