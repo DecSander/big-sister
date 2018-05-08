@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, send_from_directory, request
 import time
 
-from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction
+from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction, get_counts_at_time
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
