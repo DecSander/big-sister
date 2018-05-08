@@ -31,8 +31,8 @@ def setup_db_tier1(counts, servers, backends):
     c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts;')
     camera_rows = c.fetchall()
     for row in camera_rows:
-        camera_id = row[0]
-        camera_count = row[1]
+        camera_id = int(row[0])
+        camera_count = int(row[1])
         photo_time = row[2]
         counts[camera_id] = {'camera_count': camera_count, 'photo_time': photo_time}
 
@@ -86,7 +86,6 @@ def get_last_data(camera_id=None):
         c.execute("SELECT * FROM camera_counts WHERE datetime(photo_time, 'unixepoch', 'localtime') > datetime('now', '-28 days') AND camera_id = ?;", (camera_id,))
     camera_rows = c.fetchall()
     conn.close()
-    print camera_rows
     return camera_rows
 
 
