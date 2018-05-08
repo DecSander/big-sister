@@ -62,6 +62,7 @@ def predict_occupancy(timestamp, camera_id):
         total_weight += (NUM_QUERY_WEEKS / (weeks_past + 1))
     if total_weight == 0:
         # This means we had no data to predict from
+        print "Not enough history to predict for camera", camera_id
         return jsonify(None), 204
 
     return jsonify(prediction / total_weight)

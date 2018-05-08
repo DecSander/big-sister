@@ -1,4 +1,6 @@
 from flask import Flask, jsonify, send_from_directory, request
+import time
+
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
 from utility import save_server
@@ -97,16 +99,22 @@ def room_count(room):
 @handle_errors
 def predict_room(room, timestamp):
     room, timestamp = int(room), int(timestamp)
-    if room in most_recent_counts:
+    if room not in most_recent_counts:
+        return jsonify({'error': 'Invalid room'}), 400
+
+    if timestamp > time.time():
         pred = get_prediction(room, timestamp, occupancy_predictors)
-        print pred
+        print "Prediction for room", room, "at", timestamp, ":", pred
         if pred:
             return jsonify(pred)
         else:
             return "no data", 204
     else:
-        return jsonify({'error': 'Invalid room'}), 400
-
+        data = get_past_time(room, timestamp)
+        if data:
+            return jsonify(data)
+        else:
+            return "no data", 204
 
 @app.route('/rooms', methods=['GET'])
 @handle_errors
