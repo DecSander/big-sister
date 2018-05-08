@@ -81,6 +81,7 @@ def history():
 @app.route("/counts", methods=['GET'])
 @handle_errors
 def current_counts():
+    print most_recent_counts
     return jsonify(most_recent_counts)
 
 
