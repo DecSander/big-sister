@@ -22,6 +22,7 @@ HISTORY_UPDATE_TIME = SECONDS_PER_HOUR * 24  # Daily
 HISTORY_UPDATE_TIME = 1000
 
 app = Flask(__name__)
+unsorted_history = {}
 history = None
 NUM_QUERY_WEEKS = 4  # About the last month is probably a good predictor
 
@@ -71,21 +72,18 @@ def predict_occupancy(timestamp, camera_id):
 def get_history():
     print "getting history"
     global history
+    global unsorted_history
     for server in servers:
         try:
             data = requests.get('http://{}/history'.format(server))
             if data.status_code == 200:
                 try:
                     hist_db_data = json.loads(data.text)
-                    new_hist = {}
                     for c_id, count, timestamp in hist_db_data:
-                        if c_id not in new_hist:
-                            new_hist[c_id] = [(count, timestamp)]
+                        if c_id not in unsorted_history:
+                            unsorted_history[c_id] = set([(count, timestamp)])
                         else:
-                            new_hist[c_id].append((count, timestamp))
-
-                    history = {k:sorted(set(v), key=lambda x:x[1]) for k, v in new_hist.iteritems()}
-                    print "Successfully retrieved history"
+                            unsorted_history[c_id].add((count, timestamp))
                     return
                 except ValueError:
                     logger.info("Invalid JSON returned")
@@ -94,6 +92,9 @@ def get_history():
         except requests.exceptions.ConnectionError as e:
             print e
             logger.info("server " + str(server) + " could not connect")
+            
+    history = {k:sorted(set(v), key=lambda x:x[1]) for k, v in unsorted_history.iteritems()}
+    print "Successfully retrieved history"
 
 
 def history_loop():
