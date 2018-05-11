@@ -51,7 +51,7 @@ def setup_db_tier1(counts, servers, backends):
     conn.close()
 
 
-def persist(camera_id, camera_count, photo_time, img_id):
+def persist(camera_id, camera_count, photo_time, img_id=None):
     if img_id in all_seen_uuids:
         return
     conn = sqlite3.connect(TIER1_DB)
@@ -95,7 +95,7 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time):
     for server in servers:
         if MY_IP != server:
             try:
-                seen_uuid = uuid.uuid4()
+                seen_uuid = uuid.uuid4().hex
                 all_seen_uuids.append(seen_uuid)
                 result = requests.post('http://{}/update_camera'.format(server),
                                        timeout=TIMEOUT,
