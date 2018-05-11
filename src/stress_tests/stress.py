@@ -6,7 +6,7 @@ from threading import Thread
 
 URL = "http://bigsister.info"
 
-FREQS = [1,2,4,8,16,32,64,128,256]
+FREQS = [1024]
 IMAGE = open("test_image.jpg", 'rb')
 
 
