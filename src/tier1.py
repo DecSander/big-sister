@@ -139,4 +139,4 @@ def send_favicon():
 
 if __name__ == "__main__":
     bootup_tier1(most_recent_counts, servers, backends)
-    app.run(host='0.0.0.0', port=80, threaded=True, ssl_context=('../key.crt', '../key.key'))
+    app.run(host='0.0.0.0', port=80, threaded=True)
