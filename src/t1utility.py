@@ -4,6 +4,7 @@ import requests
 from StringIO import StringIO
 import json
 import boto3
+import uuid
 
 from utility import retrieve_startup_info
 from const import TIER1_DB, MY_IP, TIMEOUT, FB_APP_ID, FB_APP_SECRET, FACE_COMPARE_THRESHOLD
@@ -14,6 +15,7 @@ logger = logging.getLogger('t1')
 
 s3_client = boto3.client('s3')
 s3_resource = boto3.resource('s3')
+all_seen_uuids = set()
 
 
 def setup_db_tier1(counts, servers, backends):
@@ -31,8 +33,8 @@ def setup_db_tier1(counts, servers, backends):
     c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts;')
     camera_rows = c.fetchall()
     for row in camera_rows:
-        camera_id = row[0]
-        camera_count = row[1]
+        camera_id = int(row[0])
+        camera_count = int(row[1])
         photo_time = row[2]
         counts[camera_id] = {'camera_count': camera_count, 'photo_time': photo_time}
 
@@ -51,7 +53,9 @@ def setup_db_tier1(counts, servers, backends):
     conn.close()
 
 
-def persist(camera_id, camera_count, photo_time):
+def persist(camera_id, camera_count, photo_time, img_id=None):
+    if img_id in all_seen_uuids:
+        return
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
     c.execute('INSERT INTO camera_counts values (?, ?, ?);', (camera_id, camera_count, photo_time))
@@ -90,20 +94,23 @@ def get_last_data(camera_id=None):
              ))
     camera_rows = c.fetchall()
     conn.close()
-
     return camera_rows
 
 
 def send_to_other_servers(servers, camera_id, camera_count, photo_time):
+    global all_seen_uuids
     for server in servers:
         if MY_IP != server:
             try:
+                seen_uuid = uuid.uuid4().hex
+                all_seen_uuids.add(seen_uuid)
                 result = requests.post('http://{}/update_camera'.format(server),
                                        timeout=TIMEOUT,
                                        json={
                                        'camera_id': camera_id,
                                        'camera_count': camera_count,
-                                       'photo_time': photo_time
+                                       'photo_time': photo_time,
+                                       'img_id': seen_uuid
                                        })
                 if result.status_code != 200:
                     print result.json()
@@ -169,13 +176,17 @@ def get_prediction(camera_id, timestamp, occupancy_predictors):
     payload = {"camera_id": camera_id, "timestamp": timestamp}
     for oc in occupancy_predictors:
         try:
-            response = requests.post(oc, payload=payload)
+            response = requests.post("http://" + oc, data=payload)
             if response.status_code == 200:
                 return json.loads(response.text)
             elif response.status_code == 204:
+                print "Received 204 from occupancy predictor service"
                 return None
-        except:
-            logger.info('Failed to retrieve camera count from {}'.format(oc))
+        except Exception as e:
+            logger.info('Failed to retrieve prediction from {}'.format(oc))
+            logger.info("error " + str(e))
+
+    logger.info("could not contact any occupancy predictor service")
     return None
 
 

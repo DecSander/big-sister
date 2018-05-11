@@ -18,11 +18,10 @@ def is_number(v):
     except ValueError:
         return False
 
-
-def merge_dicts(x, y):
+def merge_dicts(orig, y):
     for k in y:
-        if (k not in x) or (k in x and y[k]['photo_time'] > x[k]['photo_time']):
-            x[k] = y[k]
+        if (int(k) not in orig) or (int(k) in orig and y[k]['photo_time'] > orig[int(k)]['photo_time']):
+            orig[int(k)] = y[k]
 
 
 def save_server(server, db):
