@@ -82,7 +82,7 @@ def compare_all(encoding_str):
             closest_row = row
 
     if closest_distance > FACE_COMPARE_THRESHOLD:
-        return None  # Can you jsonify(None)?
+        return None  # TODO: Can you jsonify(None)?
     user = {
         'fb_id': closest_row[0],
         'fb_token': closest_row[1],
@@ -171,7 +171,3 @@ def get_face_encodings(img):
     array = np.array(img)
     encodings = face_recognition.face_encodings(array)
     return encodings
-
-
-def save_user(user):
-    raise Exception('TODO')
