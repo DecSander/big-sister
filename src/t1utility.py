@@ -31,8 +31,8 @@ def setup_db_tier1(counts, servers, backends):
     c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts;')
     camera_rows = c.fetchall()
     for row in camera_rows:
-        camera_id = row[0]
-        camera_count = row[1]
+        camera_id = int(row[0])
+        camera_count = int(row[1])
         photo_time = row[2]
         counts[camera_id] = {'camera_count': camera_count, 'photo_time': photo_time}
 
@@ -86,7 +86,6 @@ def get_last_data(camera_id=None):
         c.execute("SELECT * FROM camera_counts WHERE datetime(photo_time, 'unixepoch', 'localtime') > datetime('now', '-28 days') AND camera_id = ?;", (camera_id,))
     camera_rows = c.fetchall()
     conn.close()
-
     return camera_rows
 
 
@@ -96,7 +95,7 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time):
         if MY_IP != server:
             try:
                 seen_uuid = uuid.uuid4().hex
-                all_seen_uuids.append(seen_uuid)
+                all_seen_uuids.add(seen_uuid)
                 result = requests.post('http://{}/update_camera'.format(server),
                                        timeout=TIMEOUT,
                                        json={
@@ -164,6 +163,7 @@ def get_camera_count(imagefile, backends):
         except requests.exceptions.ConnectionError:
             logger.info('Failed to retrieve camera count from {}: Couldn\'t connect to IP address'.format(backend))
 
+
 def get_prediction(camera_id, timestamp, occupancy_predictors):
     payload = {"camera_id": camera_id, "timestamp": timestamp}
     for oc in occupancy_predictors:
@@ -172,6 +172,7 @@ def get_prediction(camera_id, timestamp, occupancy_predictors):
             if response.status_code == 200:
                 return json.loads(response.text)
             elif response.status_code == 204:
+                print "Received 204 from occupancy predictor service"
                 return None
         except Exception as e:
             logger.info('Failed to retrieve prediction from {}'.format(oc))

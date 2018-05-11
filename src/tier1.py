@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, send_from_directory, request
-from flask_sslify import SSLify
-from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction
+import time
+
+from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction, get_counts_at_time
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
@@ -8,13 +9,12 @@ from const import servers, backends, IP_REGEX, occupancy_predictors
 
 
 app = Flask(__name__, static_url_path='')
-sslify = SSLify(app)
 most_recent_counts = {}
 
 
 @app.route('/update_camera', methods=['POST'])
 @handle_errors
-@require_json({'camera_id': int, 'camera_count': int, 'photo_time': float, 'img_id': int})
+@require_json({'camera_id': int, 'camera_count': int, 'photo_time': float, 'img_id': str})
 def update_camera_value(camera_id, camera_count, photo_time, img_id):
     if temp_store(most_recent_counts, camera_id, camera_count, photo_time):
         persist(camera_id, camera_count, photo_time, img_id)
@@ -73,12 +73,15 @@ def server_list():
 @handle_errors
 def history():
     camera_id = request.args.get('camera_id', None)
+    if camera_id is not None:
+        camera_id = int(camera_id)
     return jsonify(get_last_data(camera_id))
 
 
 @app.route("/counts", methods=['GET'])
 @handle_errors
 def current_counts():
+    print most_recent_counts
     return jsonify(most_recent_counts)
 
 
@@ -94,10 +97,22 @@ def room_count(room):
 @app.route("/counts/<room>/<timestamp>", methods=['GET'])
 @handle_errors
 def predict_room(room, timestamp):
-    if room in most_recent_counts:
-        return jsonify(get_prediction(room, timestamp, occupancy_predictors))
-    else:
+    room, timestamp = int(room), int(timestamp)
+    if room not in most_recent_counts:
         return jsonify({'error': 'Invalid room'}), 400
+
+    if timestamp > time.time():
+        pred = get_prediction(room, timestamp, occupancy_predictors)
+        if pred is not None:
+            return jsonify(pred)
+        else:
+            return "no data", 204
+    else:
+        data = get_counts_at_time(timestamp, room)
+        if data is not None:
+            return jsonify(data[1])
+        else:
+            return "no data", 204
 
 
 @app.route('/rooms', methods=['GET'])
