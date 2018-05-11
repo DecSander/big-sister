@@ -7,7 +7,7 @@ from threading import Thread
 URL = "http://bigsister.info"
 
 FREQS = [1,2,4,8,16,32,64,128,256]
-IMAGE = open("../../stress_tests/test_image.jpg", 'rb')
+IMAGE = open("test_image.jpg", 'rb')
 
 
 # Send an arbitrary image to the backend server
