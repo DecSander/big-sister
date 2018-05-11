@@ -131,6 +131,10 @@ def homepage():
 def send_static(path):
     return send_from_directory('static', path)
 
+@app.route('/favicon.ico')
+def send_favicon():
+    return send_from_directory('static', "favicon.ico")
+
 
 if __name__ == "__main__":
     bootup_tier1(most_recent_counts, servers, backends)
