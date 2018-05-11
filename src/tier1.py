@@ -88,6 +88,7 @@ def current_counts():
 @app.route("/counts/<room>", methods=['GET'])
 @handle_errors
 def room_count(room):
+    room = int(room)
     if room in most_recent_counts:
         return jsonify(most_recent_counts[room])
     else:
