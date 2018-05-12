@@ -25,17 +25,14 @@ def get_urls():
     bootup_camera(server_urls)
 
 
-def start_camera_thread(camera, room_label):
-    c = Camera(camera, room_label)
-    c.start()
-
 
 class Camera(Thread):
 
-    def __init__(self, camera, room_label):
+    def __init__(self, cam, room_label):
         Thread.__init__(self)
-        self.camera = camera
+        self.camera = cam
         self.room_label = room_label
+        self.photo_time = None
         self.old_name = None
         self.current_name = None
 
@@ -50,23 +47,36 @@ class Camera(Thread):
 
     def take_picture(self):
         self.photo_time = time.time()
-        map(os.remove, glob(os.path.join(IMAGE_FILE_DIR, "*.jpg")))
-        self.image_name = IMAGE_FILE_DIR + str(self.photo_time) + ".jpg"
-        self.camera.capture(self.image_name)
+        self.old_name = self.current_name
+        self.current_name = IMAGE_FILE_DIR + str(self.photo_time) + ".jpg"
+        self.camera.capture(self.current_name)
 
-    def send_image(self):
-        files = {'imagefile': (self.image_name, open(self.image_name, 'rb'), 'image/jpeg')}
+    def send_image(self, same):
         try:
-            r = requests.post(SERVER_URL, files=files, data={"camera_id": self.room_label, "photo_time": time.time()})
+            if not same:
+                files = {'imagefile': (self.current_name, open(self.current_name, 'rb'), 'image/jpeg')}
+                r = requests.post(SERVER_URL, files=files, data={"camera_id": self.room_label, "photo_time": time.time()})
+            else:
+                r = requests.post(SERVER_URL, data={"camera_id": self.room_label, "photo_time": time.time()})
             print r.text
         except Exception as e:
             print "failed to send image:", e
 
     def run(self):
-        print "Taking picture..."
-        self.take_picture()
-        print "Sending picture [%s]" % self.current_name
-        self.send_image()
+        while True:
+            print "Taking picture..."
+            self.take_picture()
+            diff = self.get_percent_difference(self.current_name, self.old_name)
+            if diff > PERCENT_DIFFERENCE_THRESHOLD: 
+                print "Sending picture [%s]" % self.current_name
+                self.send_image(same=False)
+                os.remove(self.old_name)
+            else:
+                print "Image matches previous image; discarding"
+                os.remove(self.current_name)
+                self.current_name = self.old_name
+                self.send_image(same=True)
+            time.sleep(PICTURE_FREQUENCY)
 
 
 if __name__ == "__main__":
@@ -85,8 +95,6 @@ if __name__ == "__main__":
     time.sleep(2)  # Camera warm-up time
 
     print "Starting capture/thread loop"
-    while True:
-        print "time:", time.time()
-        start_camera_thread(camera, args.room_label)
-        time.sleep(PICTURE_FREQUENCY)
+    c = Camera(camera, args.room_label)
+    c.start()
 

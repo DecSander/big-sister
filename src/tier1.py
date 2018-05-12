@@ -24,7 +24,7 @@ def update_camera_value(camera_id, camera_count, photo_time, img_id):
 
 @app.route('/', methods=['POST'])
 @handle_errors
-@require_files({'imagefile': 'image/jpeg'})
+@require_files({'imagefile': 'image/jpeg'}, optional=True)
 @require_form({'camera_id': int, 'photo_time': float})
 def upload_file(imagefile, camera_id, photo_time):
     should_update = (camera_id not in most_recent_counts) or (most_recent_counts[camera_id]['photo_time'] < photo_time)
@@ -32,11 +32,15 @@ def upload_file(imagefile, camera_id, photo_time):
         logger.info('Received old message')
         return jsonify(False)
 
-    camera_count = get_camera_count(imagefile, backends)
+    if imagefile is not None:
+        camera_count = get_camera_count(imagefile, backends)
+    else:
+        camera_count = most_recent_counts[camera_id]["camera_count"]
 
     if camera_count is not None:
         process_image(servers, most_recent_counts, camera_count, camera_id, photo_time)
-        upload_file_to_s3(imagefile, camera_id, photo_time, camera_count)
+        if imagefile is not None:
+            upload_file_to_s3(imagefile, camera_id, photo_time, camera_count)
     return jsonify(camera_count)
 
 
