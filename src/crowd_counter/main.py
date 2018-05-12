@@ -124,15 +124,26 @@ def count_people(image, humanity_threshold=0.35, show_plot=False):
   # Actual detection.
   output_dict = run_inference_for_single_image(image_np, detection_graph)
   # Visualization of the results of a detection.
+  boxes = []
+  classes = []
+  scores = []
+
+
+  for box, clazz, score in zip(output_dict['detection_boxes'], output_dict['detection_classes'], output_dict['detection_scores']):
+    if clazz == 1 and score > humanity_threshold:
+      boxes.append(box)
+      classes.append(clazz)
+      scores.append(score)
   vis_util.visualize_boxes_and_labels_on_image_array(
       image_np,
-      output_dict['detection_boxes'],
-      output_dict['detection_classes'],
-      output_dict['detection_scores'],
+      np.array(boxes),
+      np.array(classes),
+      np.array(scores),
       category_index,
       instance_masks=output_dict.get('detection_masks'),
       use_normalized_coordinates=True,
-      line_thickness=8)
+      line_thickness=8,
+      min_score_thresh=humanity_threshold)
   if show_plot:
     from matplotlib import pyplot as plt
     plt.figure(figsize=IMAGE_SIZE)
