@@ -62,14 +62,17 @@ def require_form(form_types):
     return real_decorator_form
 
 
-def require_files(file_types):
+def require_files(file_types, optional=False):
     def real_decorator_file(func):
         @wraps(func)
         def func_wrapper_file(*args, **kwargs):
             file_value = request.files
             for arg in file_types:
                 if arg not in file_value:
-                    return jsonify({'error': '{} not supplied'.format(arg)}), 400
+                    if not optional:
+                        return jsonify({'error': '{} not supplied'.format(arg)}), 400
+                    else:
+                        kwargs[arg] = None
                 elif file_value.get(arg, None).content_type != file_types[arg]:
                     return jsonify({'error': '{} of type {} should be type {}'.format(arg, file_value[arg].content_type, file_types[arg])}), 400
                 else:
