@@ -120,6 +120,7 @@ def predict_room(room, timestamp):
         else:
             return "no data", 204
 
+
 @app.route('/rooms', methods=['GET'])
 @handle_errors
 def rooms_list():
@@ -128,10 +129,10 @@ def rooms_list():
 
 @app.route('/identify_face', methods=['GET'])
 @handle_errors
-@require_json({'time': float, 'camera_id': int, 'encoding': str})
-def identify_face():
-    face_encoding = np.fromstring(encoding)
-    user = compare_all(face_encoding)
+@require_json({'time': float, 'camera_id': int})
+@require_files({'imagefile': 'image/jpeg'})
+def identify_face(time, camera_id, imagefile):
+    user = compare_all(imagefile)
     if user is not None:
         cache_sighting(time, camera_id, user['fb_id'])
     return jsonify(user)  # Or just return jsonify(True) to confirm face received?
@@ -140,7 +141,7 @@ def identify_face():
 @app.route('/fb_login', methods=['POST'])
 @handle_errors
 @require_json({'fb_id': str, 'fb_short_token': str})
-def save_user_token():
+def save_user_token(fb_id, fb_short_token):
     fb_long_token = fb_get_long_lived_token(fb_short_token)
     user = register_user(backends, fb_id, fb_long_token)
     return jsonify(user)

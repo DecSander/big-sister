@@ -66,16 +66,18 @@ def persist_user(fb_id, fb_token, name, face_encodings):
     conn.close()
 
 
-def compare_all(encoding_str):
+def compare_all(imagefile):
     conn = sqlite3.connect(TIER2_DB)
     c = conn.cursor()
 
-    unknown = np.fromstring(encoding)
+    imagefile.seek(0)
+    img = Image.open(imagefile)
+    encoding = get_face_encodings(img)[0]
     closest_distance = 1.0
     closest_row = ''
     for row in c.execute('SELECT * FROM users'):
         known_encodings = parse_face_encodings_str(row[3])
-        dists = face_recognition.api.face_distance(known_encodings, unknown)
+        dists = face_recognition.api.face_distance(known_encodings, encoding)
         min_dist = min(dists)
         if closest_distance > min_dist:
             closest_distance = min_dist

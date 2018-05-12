@@ -33,14 +33,14 @@ def upload_file(imagefile):
     resized = resize_image(imagefile)
     model_count = count_people(resized)
     prediction = model_count
-    #prediction = int(regression_model.predict(model_count)[0][0])
+    # prediction = int(regression_model.predict(model_count)[0][0])
     return jsonify(prediction)
 
 
 @app.route('/new_user', methods=['POST'])
 @handle_errors
 @require_json({'fb_id': str, 'fb_long_token': str})
-def create_user():
+def create_user(fb_id, fb_long_token):
     name = fb_get_user_name(fb_id, fb_long_token)
     face_encodings = fb_get_user_photos_encodings(fb_id, fb_long_token)
     face_encodings_str = repr(map(lambda x: x.tostring(), face_encodings))
@@ -54,11 +54,12 @@ def create_user():
     return jsonify(user)
 
 
-@app.route('/identify_face', methods=['GET'])
+@app.route('/identify_face', methods=['POST'])
 @handle_errors
-@require_json({'encoding': str})
-def identify_face():
-    user = compare_all(encoding)
+@require_files({'imagefile': 'image/jpeg'})
+def identify_face(imagefile):
+    user = compare_all(imagefile)
+    print user
     return jsonify(user)
 
 

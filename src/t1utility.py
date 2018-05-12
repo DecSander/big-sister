@@ -5,6 +5,7 @@ from StringIO import StringIO
 import json
 import boto3
 import uuid
+import face_recognition as fr
 
 from utility import retrieve_startup_info
 from const import TIER1_DB, MY_IP, TIMEOUT, FB_APP_ID, FB_APP_SECRET, FACE_COMPARE_THRESHOLD
@@ -202,17 +203,21 @@ def upload_file_to_s3(file, camera_id, photo_time, camera_count):
         print e
 
 
-def compare_all(encoding_str):
+def compare_all(imagefile):
     conn = sqlite3.connect(TIER2_DB)
     c = conn.cursor()
 
     # Check cached users for matching face
-    unknown = np.fromstring(encoding)
+    imagefile.seek(0)
+    img = Image.open(imagefile)
+    array = np.array(img)
+    unknown = face_recognition.face_encodings(array)[0]
+
     closest_distance = 1.0
     closest_row = ''
     for row in c.execute('SELECT * FROM users'):
         known_encodings = parse_face_encodings_str(row[3])
-        dists = face_recognition.api.face_distance(known_encodings, unknown)
+        dists = fr.api.face_distance(known_encodings, unknown)
         min_dist = min(dists)
         if closest_distance > min_dist:
             closest_distance = min_dist
