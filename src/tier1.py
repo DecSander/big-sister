@@ -10,7 +10,6 @@ from const import servers, backends, IP_REGEX, occupancy_predictors
 
 
 app = Flask(__name__, static_url_path='')
-
 most_recent_counts = {}
 
 
@@ -77,7 +76,6 @@ def history():
     camera_id = request.args.get('camera_id', None)
     if camera_id is not None:
         camera_id = int(camera_id)
-    print "Retrieving history for", camera_id
     return jsonify(get_last_data(camera_id))
 
 
@@ -91,7 +89,6 @@ def current_counts():
 @app.route("/counts/<room>", methods=['GET'])
 @handle_errors
 def room_count(room):
-    print "Received room request"
     room = int(room)
     if room in most_recent_counts:
         return jsonify(most_recent_counts[room])
@@ -108,7 +105,6 @@ def predict_room(room, timestamp):
 
     if timestamp > time.time():
         pred = get_prediction(room, timestamp, occupancy_predictors)
-        print "Prediction for room", room, "at", timestamp, ":", pred
         if pred is not None:
             return jsonify(pred)
         else:
@@ -157,8 +153,11 @@ def homepage():
 def send_static(path):
     return send_from_directory('static', path)
 
+@app.route('/favicon.ico')
+def send_favicon():
+    return send_from_directory('static', "favicon.ico")
+
 
 if __name__ == "__main__":
     bootup_tier1(most_recent_counts, servers, backends)
-    print(most_recent_counts)
     app.run(host='0.0.0.0', port=80, threaded=True)
