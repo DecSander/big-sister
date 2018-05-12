@@ -3,6 +3,7 @@ import time
 
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction, get_counts_at_time
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
+from t1utility import fb_get_long_lived_token, register_user, cache_sighting, compare_all
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
 from const import servers, backends, IP_REGEX, occupancy_predictors
@@ -120,6 +121,26 @@ def predict_room(room, timestamp):
 @handle_errors
 def rooms_list():
     return jsonify(most_recent_counts.keys())
+
+
+@app.route('/classify_face', methods=['POST'])
+@handle_errors
+@require_form({'time': float, 'camera_id': int})
+@require_files({'imagefile': 'image/jpeg'})
+def classify_face(time, camera_id, imagefile):
+    user = compare_all(imagefile, backends)
+    if user is not None:
+        cache_sighting(time, camera_id, user['fb_id'])
+    return jsonify(user)  # Or just return jsonify(True) to confirm face received?
+
+
+@app.route('/fb_login', methods=['POST'])
+@handle_errors
+@require_json({'fb_id': str, 'fb_short_token': str})
+def save_user_token(fb_id, fb_short_token):
+    fb_long_token = fb_get_long_lived_token(fb_short_token)
+    user = register_user(backends, fb_id, fb_long_token)
+    return jsonify(user)
 
 
 @app.route('/', methods=['GET'])

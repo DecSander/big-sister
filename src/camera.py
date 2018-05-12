@@ -3,17 +3,22 @@
 import argparse
 import requests
 import time
+from glob import glob
 import os
+
 from picamera import PiCamera
 from threading import Thread
 
 from cutility import bootup_camera
 from const import servers
 
-SERVER_URL = 'http://18.221.18.72:5000'
+SERVER_URL = 'http://18.221.18.72'
 server_urls = servers
 camera_id = 1
 
+IMAGE_BANK_SIZE = 2**20 * 100
+IMAGE_FILE_DIR = "image_data/"
+PICTURE_FREQUENCY = 5 * 60
 
 def get_urls():
     bootup_camera(server_urls)
@@ -33,20 +38,25 @@ class Camera(Thread):
 
     def take_picture(self):
         self.photo_time = time.time()
-        self.image_name = str(self.photo_time) + ".jpg"
+        map(os.remove, glob(os.path.join(IMAGE_FILE_DIR, "*.jpg")))
+        self.image_name = IMAGE_FILE_DIR + str(self.photo_time) + ".jpg"
         self.camera.capture(self.image_name)
 
     def send_image(self):
-        files = {'imagefile': (self.image_name, open(os.path.basename(self.image_name), 'rb'), 'image/jpeg')}
-        requests.post(SERVER_URL, files=files, data={"camera_id": self.room_label, "photo_time": time.time()})
+        files = {'imagefile': (self.image_name, open(self.image_name, 'rb'), 'image/jpeg')}
+        try:
+            r = requests.post(SERVER_URL, files=files, data={"camera_id": self.room_label, "photo_time": time.time()})
+            print r.text
+        except Exception as e:
+            print "failed to send image:", e
 
     def run(self):
         print "Taking picture..."
         self.take_picture()
         print "Sending picture [%s]" % self.image_name
         self.send_image()
-        print "Removing sent image [%s]" % self.image_name
-        os.remove(self.image_name)
+#        print "Removing sent image [%s]" % self.image_name
+#        os.remove(self.image_name)
 
 
 if __name__ == "__main__":
@@ -66,5 +76,7 @@ if __name__ == "__main__":
 
     print "Starting capture/thread loop"
     while True:
+        print "time:", time.time()
         start_camera_thread(camera, args.room_label)
-        time.sleep(10)
+        time.sleep(PICTURE_FREQUENCY)
+

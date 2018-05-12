@@ -12,3 +12,9 @@ TIER1_DB = '../databases/tier1.db'
 TIER2_DB = '../databases/tier2.db'
 SENSOR_DB = '../databases/sensor.db'
 IP_REGEX = '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
+
+FACE_COMPARE_THRESHOLD = 0.4
+
+# Facebook App stuff
+FB_APP_ID = '172353816928881'
+FB_APP_SECRET = 'e7ebaa026225cdbc01b075d0ed014651'

@@ -5,9 +5,12 @@ from StringIO import StringIO
 import json
 import boto3
 import uuid
+import face_recognition as fr
+from PIL import Image
+import numpy as np
 
 from utility import retrieve_startup_info
-from const import TIER1_DB, MY_IP, TIMEOUT
+from const import TIER1_DB, MY_IP, TIMEOUT, FB_APP_ID, FB_APP_SECRET, FACE_COMPARE_THRESHOLD
 
 logging.basicConfig(filename='t1.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
@@ -23,6 +26,8 @@ def setup_db_tier1(counts, servers, backends):
     c = conn.cursor()
 
     c.execute('CREATE TABLE IF NOT EXISTS camera_counts (camera_id INTEGER, camera_count INTEGER, photo_time REAL);')
+    c.execute('CREATE TABLE IF NOT EXISTS users (fb_id TEXT PRIMARY KEY, fb_token TEXT, name TEXT, face_encodings TEXT);')
+    c.execute('CREATE TABLE IF NOT EXISTS face_sightings (sighting_time REAL, camera_id INTEGER, fb_id TEXT);')
     c.execute('CREATE TABLE IF NOT EXISTS server_list (ip_address TEXT UNIQUE);')
     c.execute('CREATE TABLE IF NOT EXISTS backend_list (ip_address TEXT UNIQUE);')
     conn.commit()
@@ -67,7 +72,10 @@ def get_counts_at_time(time, camera_id=None):
     if camera_id is None:
         c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts where photo_time <= (SELECT max(photo_time) FROM camera_counts WHERE photo_time < ? GROUP BY camera_id) order by photo_time desc;', (time,))
     else:
-        c.execute('SELECT camera_id, camera_count, photo_time FROM camera_counts WHERE camera_id = ? AND photo_time <= ?;', (camera_id, time))
+        c.execute(
+            'SELECT camera_id, camera_count, photo_time FROM camera_counts WHERE camera_id = ? AND photo_time <= ?;',
+            (camera_id,
+             time))
     camera_rows = c.fetchall()
     conn.close()
 
@@ -83,7 +91,10 @@ def get_last_data(camera_id=None):
     if camera_id is None:
         c.execute("SELECT * FROM camera_counts WHERE datetime(photo_time, 'unixepoch', 'localtime') > datetime('now', '-28 days');")
     else:
-        c.execute("SELECT * FROM camera_counts WHERE datetime(photo_time, 'unixepoch', 'localtime') > datetime('now', '-28 days') AND camera_id = ?;", (camera_id,))
+        c.execute(
+            "SELECT * FROM camera_counts WHERE datetime(photo_time, 'unixepoch', 'localtime') > datetime('now', '-28 days') AND camera_id = ?;",
+            (camera_id,
+             ))
     camera_rows = c.fetchall()
     conn.close()
     return camera_rows
@@ -190,6 +201,99 @@ def upload_file_to_s3(file, camera_id, photo_time, camera_count):
             'cc-proj',
             ExtraArgs={"ContentType": 'image/jpeg'}
         )
+    except Exception as e:
+        print e
+
+
+def compare_all(imagefile, backends):
+    conn = sqlite3.connect(TIER1_DB)
+    c = conn.cursor()
+
+    # Check cached users for matching face
+    imagefile_contents = imagefile.read()
+
+    imagefile.seek(0)
+    img = Image.open(imagefile)
+    array = np.array(img)
+    unknown = fr.face_encodings(array)[0]
+
+    closest_distance = 1.0
+    closest_row = ''
+    for row in c.execute('SELECT * FROM users'):
+        known_encodings = parse_face_encodings_str(row[3])
+        dists = fr.api.face_distance(known_encodings, unknown)
+        min_dist = min(dists)
+        if closest_distance > min_dist:
+            closest_distance = min_dist
+            closest_row = row
+
+    # Check backend if no matching face found
+    if closest_distance > FACE_COMPARE_THRESHOLD:
+        for backend in backends:  # TODO: Don't query all backends?
+            try:
+                imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')
+                result = requests.post(
+                    'http://{}:5001/identify_face'.format(backend),
+                    files={'imagefile': imagefile_str})
+                if result.status_code != 200:
+                    print result.text
+                user = result.json()
+            except Exception as e:
+                print 'Failed to post: {}'.format(e)
+                user = None
+    else:
+        user = {
+            'fb_id': closest_row[0],
+            'fb_token': closest_row[1],
+            'name': closest_row[2],
+            'face_encodings_str': closest_row[3],
+        }
+    return user
+
+
+def register_user(backends, fb_user_id, fb_long_token):
+    json = {'fb_user_id': fb_user_id, 'fb_long_token': fb_long_token}
+    for backend in backends:
+        try:
+            result = requests.post('http://{}/new_user'.format(backend), json)
+            if result.status_code != 200:
+                print result.text
+            user = result.json()
+            cache_user(fb_user_id, fb_long_token, user['name'], user['face_encodings_str'])
+            return user
+        except Exception as e:
+            print e
+
+
+def cache_user(fb_id, fb_token, name, face_encodings_str):
+    conn = sqlite3.connect(TIER1_DB)
+    c = conn.cursor()
+    c.execute('INSERT INTO users values (?, ?, ?, ?);', (fb_id, fb_token, name, face_encodings_str))
+    conn.commit()
+    conn.close()
+
+
+def cache_sighting(time, camera_id, fb_id):
+    conn = sqlite3.connect(TIER1_DB)
+    c = conn.cursor()
+    c.execute('INSERT INTO face_sightings values (?, ?, ?);', (time, camera_id, fb_id))
+    conn.commit()
+    conn.close()
+
+
+def fb_get_long_lived_token(fb_short_token):
+    url = 'https://graph.facebook.com/oauth/access_token'
+    payload = {
+        'grant_type': 'fb_exchange_token',
+        'client_id': FB_APP_ID,
+        'client_secret': FB_APP_SECRET,
+        'fb_exchange_token': fb_short_token,
+    }
+    try:
+        result = requests.get(url, params=payload)
+        if result.status_code != 200:
+            print result.json()
+        return result.json()['access_token']
     except Exception as e:
         print e
 
