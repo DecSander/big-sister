@@ -1,7 +1,7 @@
 import sqlite3
 import requests
 import logging
-import face_recognition
+#import face_recognition
 import numpy as np
 from PIL import Image
 

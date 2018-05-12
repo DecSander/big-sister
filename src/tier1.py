@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, send_from_directory, request
 import time
+from collections import defaultdict
 
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction, get_counts_at_time
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
@@ -11,6 +12,7 @@ from const import servers, backends, IP_REGEX, occupancy_predictors
 
 app = Flask(__name__, static_url_path='')
 most_recent_counts = {}
+most_recent_sightings = defaultdict(dict)
 
 
 @app.route('/update_camera', methods=['POST'])
@@ -82,7 +84,6 @@ def history():
 @app.route("/counts", methods=['GET'])
 @handle_errors
 def current_counts():
-    print most_recent_counts
     return jsonify(most_recent_counts)
 
 
@@ -130,7 +131,7 @@ def rooms_list():
 def classify_face(time, camera_id, imagefile):
     user = compare_all(imagefile, backends)
     if user is not None:
-        cache_sighting(time, camera_id, user['fb_id'])
+        cache_sighting(time, camera_id, user['fb_id'], most_recent_sightings)
     return jsonify(user)  # Or just return jsonify(True) to confirm face received?
 
 

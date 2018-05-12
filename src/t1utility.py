@@ -5,9 +5,10 @@ from StringIO import StringIO
 import json
 import boto3
 import uuid
-import face_recognition as fr
+# import face_recognition as fr
 from PIL import Image
 import numpy as np
+import time
 
 from utility import retrieve_startup_info
 from const import TIER1_DB, MY_IP, TIMEOUT, FB_APP_ID, FB_APP_SECRET, FACE_COMPARE_THRESHOLD
@@ -273,10 +274,14 @@ def cache_user(fb_id, fb_token, name, face_encodings_str):
     conn.close()
 
 
-def cache_sighting(time, camera_id, fb_id):
+def cache_sighting(tme, camera_id, fb_id, most_recent_sightings):
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
-    c.execute('INSERT INTO face_sightings values (?, ?, ?);', (time, camera_id, fb_id))
+    c.execute('INSERT INTO face_sightings values (?, ?, ?);', (tme, camera_id, fb_id))
+    for person, sighting_time in most_recent_sightings.items():
+        if sighting_time < time.time():
+            del most_recent_sightings[person]
+    most_recent_sightings[fb_id] = time.time()
     conn.commit()
     conn.close()
 
