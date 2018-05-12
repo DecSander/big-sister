@@ -3,7 +3,7 @@ import time
 
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction, get_counts_at_time
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
-from t1utility import fb_get_long_lived_token, register_user, cache_sighting
+from t1utility import fb_get_long_lived_token, register_user, cache_sighting, compare_all
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
 from const import servers, backends, IP_REGEX, occupancy_predictors
@@ -123,12 +123,12 @@ def rooms_list():
     return jsonify(most_recent_counts.keys())
 
 
-@app.route('/identify_face', methods=['GET'])
+@app.route('/classify_face', methods=['POST'])
 @handle_errors
-@require_json({'time': float, 'camera_id': int})
+@require_form({'time': float, 'camera_id': int})
 @require_files({'imagefile': 'image/jpeg'})
-def identify_face(time, camera_id, imagefile):
-    user = compare_all(imagefile)
+def classify_face(time, camera_id, imagefile):
+    user = compare_all(imagefile, backends)
     if user is not None:
         cache_sighting(time, camera_id, user['fb_id'])
     return jsonify(user)  # Or just return jsonify(True) to confirm face received?
@@ -152,6 +152,7 @@ def homepage():
 @app.route('/static/<path:path>')
 def send_static(path):
     return send_from_directory('static', path)
+
 
 @app.route('/favicon.ico')
 def send_favicon():

@@ -6,6 +6,8 @@ import json
 import boto3
 import uuid
 import face_recognition as fr
+from PIL import Image
+import numpy as np
 
 from utility import retrieve_startup_info
 from const import TIER1_DB, MY_IP, TIMEOUT, FB_APP_ID, FB_APP_SECRET, FACE_COMPARE_THRESHOLD
@@ -203,15 +205,17 @@ def upload_file_to_s3(file, camera_id, photo_time, camera_count):
         print e
 
 
-def compare_all(imagefile):
-    conn = sqlite3.connect(TIER2_DB)
+def compare_all(imagefile, backends):
+    conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
 
     # Check cached users for matching face
+    imagefile_contents = imagefile.read()
+
     imagefile.seek(0)
     img = Image.open(imagefile)
     array = np.array(img)
-    unknown = face_recognition.face_encodings(array)[0]
+    unknown = fr.face_encodings(array)[0]
 
     closest_distance = 1.0
     closest_row = ''
@@ -225,15 +229,18 @@ def compare_all(imagefile):
 
     # Check backend if no matching face found
     if closest_distance > FACE_COMPARE_THRESHOLD:
-        json = {'encoding': encoding_str}
         for backend in backends:  # TODO: Don't query all backends?
             try:
-                result = requests.post('http://{}/identify_face'.format(backend), json)
+                imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')
+                result = requests.post(
+                    'http://{}:5001/identify_face'.format(backend),
+                    files={'imagefile': imagefile_str})
                 if result.status_code != 200:
                     print result.text
                 user = result.json()
             except Exception as e:
-                print e
+                print 'Failed to post: {}'.format(e)
+                user = None
     else:
         user = {
             'fb_id': closest_row[0],
@@ -259,7 +266,7 @@ def register_user(backends, fb_user_id, fb_long_token):
 
 
 def cache_user(fb_id, fb_token, name, face_encodings_str):
-    conn = sqlite3.connect(TIER2_DB)
+    conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
     c.execute('INSERT INTO users values (?, ?, ?, ?);', (fb_id, fb_token, name, face_encodings_str))
     conn.commit()
@@ -267,7 +274,7 @@ def cache_user(fb_id, fb_token, name, face_encodings_str):
 
 
 def cache_sighting(time, camera_id, fb_id):
-    conn = sqlite3.connect(TIER2_DB)
+    conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
     c.execute('INSERT INTO face_sightings values (?, ?, ?);', (time, camera_id, fb_id))
     conn.commit()

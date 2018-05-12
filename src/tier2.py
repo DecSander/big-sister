@@ -59,7 +59,6 @@ def create_user(fb_id, fb_long_token):
 @require_files({'imagefile': 'image/jpeg'})
 def identify_face(imagefile):
     user = compare_all(imagefile)
-    print user
     return jsonify(user)
 
 
