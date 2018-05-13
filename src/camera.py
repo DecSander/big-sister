@@ -13,9 +13,9 @@ from const import servers
 import numpy as np
 from PIL import Image
 
-SERVER_URL = 'http://18.221.18.72'
+SERVER_URL = 'https://bigsister.info'
 server_urls = servers
-PERCENT_DIFFERENCE_THRESHOLD = 0.02
+PERCENT_DIFFERENCE_THRESHOLD = 0.5
 
 IMAGE_BANK_SIZE = 2**20 * 100
 IMAGE_FILE_DIR = "image_data/"
@@ -55,9 +55,9 @@ class Camera(Thread):
         try:
             if not same:
                 files = {'imagefile': (self.current_name, open(self.current_name, 'rb'), 'image/jpeg')}
-                r = requests.post(SERVER_URL, files=files, data={"camera_id": self.room_label, "photo_time": time.time()})
+                r = requests.post(SERVER_URL, files=files, verify=False, data={"camera_id": self.room_label, "photo_time": time.time()})
             else:
-                r = requests.post(SERVER_URL, data={"camera_id": self.room_label, "photo_time": time.time()})
+                r = requests.post(SERVER_URL, verify=False, data={"camera_id": self.room_label, "photo_time": time.time()})
             print r.text
         except Exception as e:
             print "failed to send image:", e
@@ -66,11 +66,16 @@ class Camera(Thread):
         while True:
             print "Taking picture..."
             self.take_picture()
-            diff = self.get_percent_difference(self.current_name, self.old_name)
+            print(self.current_name, self.old_name)
+            if self.old_name is None:
+                diff = 1
+            else:
+                diff = self.get_percent_difference(self.current_name, self.old_name)
             if diff > PERCENT_DIFFERENCE_THRESHOLD: 
                 print "Sending picture [%s]" % self.current_name
                 self.send_image(same=False)
-                os.remove(self.old_name)
+                if self.old_name is not None:
+                    os.remove(self.old_name)
             else:
                 print "Image matches previous image; discarding"
                 os.remove(self.current_name)
