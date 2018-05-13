@@ -1,7 +1,7 @@
 import sqlite3
 import requests
 import logging
-import face_recognition
+#import face_recognition
 import numpy as np
 from PIL import Image
 
@@ -44,7 +44,7 @@ def resize_image(imagefile):
 def notify_new_backend(servers):
     for server in servers:
         try:
-            result = requests.post('http://{}/new_backend'.format(server), json={'ip_address': MY_IP})
+            result = requests.post('https://{}/new_backend'.format(server), verify=False, json={'ip_address': MY_IP})
             if result.status_code != 200:
                 logger.warning('New server notification for server {} failed: {}'.format(server, result.text))
         except requests.exceptions.ConnectionError:

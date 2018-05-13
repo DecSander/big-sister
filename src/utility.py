@@ -42,13 +42,13 @@ def retrieve_startup_info(servers, backends, counts, db):
         visited_servers.add(server)
         if MY_IP != server:
             try:
-                result = requests.get('http://{}/servers_backends'.format(server), timeout=TIMEOUT)
+                result = requests.get('https://{}/servers_backends'.format(server), verify=False, timeout=TIMEOUT)
                 if result.status_code == 200:
                     startup_info = json.loads(result.text)
                     servers.update(set(startup_info['servers']))
                     backends.update(set(startup_info['backends']))
                     merge_dicts(counts, startup_info['counts'])
-
+                    print "reached server"
                     for new_server in startup_info['servers']:
                         save_server(new_server, db)
                         if new_server not in visited_servers:

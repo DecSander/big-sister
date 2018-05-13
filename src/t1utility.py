@@ -5,7 +5,7 @@ from StringIO import StringIO
 import json
 import boto3
 import uuid
-import face_recognition as fr
+#import face_recognition as fr
 from PIL import Image
 import numpy as np
 
@@ -107,8 +107,9 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time):
             try:
                 seen_uuid = uuid.uuid4().hex
                 all_seen_uuids.add(seen_uuid)
-                result = requests.post('http://{}/update_camera'.format(server),
+                result = requests.post('https://{}/update_camera'.format(server),
                                        timeout=TIMEOUT,
+                                       verify=False,
                                        json={
                                        'camera_id': camera_id,
                                        'camera_count': camera_count,
@@ -150,7 +151,7 @@ def save_backend(backend):
 def notify_new_server(servers):
     for server in servers:
         try:
-            result = requests.post('http://{}/new_server'.format(server), json={'ip_address': MY_IP})
+            result = requests.post('https://{}/new_server'.format(server), verify=False, json={'ip_address': MY_IP})
             if result.status_code != 200:
                 logger.warning('New server notification for server {} failed: {}'.format(server, result.text))
         except requests.exceptions.ConnectionError:
