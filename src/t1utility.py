@@ -332,8 +332,7 @@ def get_sightings(room=None, timestamp=None):
 
     if room is None:
         recent_sightings = {}
-        c.execute("SELECT camera_id, name FROM face_sightings JOIN users;")
-        # c.execute("SELECT camera_id, name FROM face_sightings JOIN users WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-2 hours');")
+        c.execute("SELECT camera_id, name FROM face_sightings JOIN users ON face_sightings.fb_id = users.fb_id WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-30 minutes');")
         for camera_id, name in c.fetchall():
             if camera_id not in recent_sightings:
                 recent_sightings[camera_id] = set([name])
@@ -341,7 +340,7 @@ def get_sightings(room=None, timestamp=None):
                 recent_sightings[camera_id].add(name)
         return {k: list(v) for k, v in recent_sightings.iteritems()}
     else:
-        c.execute("SELECT name FROM face_sightings JOIN users WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-2 hours');")
+        c.execute("SELECT name FROM face_sightings JOIN users ON face_sightings.fb_id = users.fb_id WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-30 minutes');")
         names = set(c.fetchall())
         return list(names)
 
