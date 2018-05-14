@@ -262,7 +262,6 @@ def persist_sighting(tme, camera_id, fb_id, most_recent_sightings, sighting_id=N
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
     c.execute('INSERT INTO face_sightings values (?, ?, ?);', (tme, camera_id, fb_id))
-
     for person, sighting_time in most_recent_sightings.items():
         if sighting_time < time.time():
             del most_recent_sightings[person]
