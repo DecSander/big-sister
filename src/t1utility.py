@@ -129,6 +129,8 @@ def temp_store(counts, camera_id, camera_count, photo_time, seen_uuid=None):
             'camera_count': camera_count,
             'photo_time': photo_time
         }
+        if seen_uuid is not None:
+            all_seen_uuids.add(seen_uuid)
     return should_update
 
 

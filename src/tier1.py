@@ -20,7 +20,7 @@ most_recent_sightings = defaultdict(dict)
 @handle_errors
 @require_json({'camera_id': int, 'camera_count': int, 'photo_time': float, 'img_id': str})
 def update_camera_value(camera_id, camera_count, photo_time, img_id):
-    if temp_store(most_recent_counts, camera_id, camera_count, photo_time):
+    if temp_store(most_recent_counts, camera_id, camera_count, photo_time, img_id):
         send_to_other_servers(servers, camera_id, camera_count, img_id)
         persist(camera_id, camera_count, photo_time, img_id)
     return jsonify(True)
