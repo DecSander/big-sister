@@ -40,7 +40,8 @@ function handleSingleRoom(room_id, room) {
   $('#room-id').text('Room ' + room_id);
   $('#room-count').text('Occupancy: ' + room.camera_count);
   $('#room-time').text(formatTime(room.photo_time));
-  $('#people-names').text('People: ', room.sightings.join(', '))
+  var names = room.sightings.length > 0 ? 'People Found: ' + room.sightings.join(', ') : 'No Faces Found';
+  $('#people-names').text(names)
 }
 
 function handleAllCounts(data, setValues) {
