@@ -5,7 +5,7 @@ from collections import defaultdict
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction, get_counts_at_time
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
 from t1utility import register_user, persist_user, persist_sighting, broadcast_user, broadcast_sighting, get_faces
-from t1utility import send_to_other_servers
+from t1utility import send_to_other_servers, get_sightings, get_all_users
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
 from const import servers, backends, IP_REGEX, occupancy_predictors, face_classifiers
@@ -40,7 +40,7 @@ def update_user(fb_id, fb_token, name, face_encodings_str):
 @require_json({'time': float, 'camera_id': int, 'fb_id': str, 'sighting_id': str})
 def update_sighting(time, camera_id, fb_id, sighting_id):
     if persist_sighting(time, camera_id, fb_id, most_recent_sightings, sighting_id):
-        broadcast_sighting(servers, time, camera_id, fb_id)
+        broadcast_sighting(servers, time, camera_id, fb_id, sighting_id)
     return jsonify(True)
 
 
@@ -59,7 +59,6 @@ def upload_file(imagefile, camera_id, photo_time):
         imagefile.seek(0)
         fb_ids = get_faces(imagefile, face_classifiers)
         for fb_id in fb_ids:
-            print fb_id
             persist_sighting(photo_time, camera_id, fb_id, most_recent_sightings)
             broadcast_sighting(servers, photo_time, camera_id, fb_id)
     else:
@@ -114,7 +113,11 @@ def history():
 @app.route("/counts", methods=['GET'])
 @handle_errors
 def current_counts():
-    return jsonify(most_recent_counts)
+    recent_sightings = get_sightings()
+    counts_info = dict(most_recent_counts)
+    for room in counts_info.keys():
+        counts_info[room]['sightings'] = recent_sightings[room] if room in recent_sightings else []
+    return jsonify(counts_info)
 
 
 @app.route("/counts/<room>", methods=['GET'])
@@ -122,7 +125,9 @@ def current_counts():
 def room_count(room):
     room = int(room)
     if room in most_recent_counts:
-        return jsonify(most_recent_counts[room])
+        room_info = dict(most_recent_counts[room])
+        room_info['sightings'] = get_sightings(room)
+        return jsonify(room_info)
     else:
         return jsonify({'error': 'Invalid room'}), 400
 
@@ -158,9 +163,8 @@ def rooms_list():
 @handle_errors
 @require_json({'fb_id': str, 'fb_short_token': str})
 def fb_login(fb_id, fb_short_token):
-    print 'asdfasdfasdf'
+    # Check if user already exists instead of always broadcasting?
     user = register_user(face_classifiers, fb_id, fb_short_token)
-    # if user is not None and persist_user(fb_id, user['fb_token'], user['name'], user['face_encodings_str']):
     broadcast_user(
         servers,
         face_classifiers,
@@ -169,6 +173,12 @@ def fb_login(fb_id, fb_short_token):
         user['name'],
         user['face_encodings_str'])
     return jsonify(user)
+
+
+@app.route('/users', methods=['GET'])
+@handle_errors
+def all_users():
+    return jsonify(get_all_users())
 
 
 @app.route('/', methods=['GET'])
