@@ -42,7 +42,7 @@ def retrieve_startup_info(servers, backends, counts, db):
         visited_servers.add(server)
         if MY_IP != server:
             try:
-                result = requests.get('https://{}/servers_backends'.format(server), timeout=TIMEOUT)
+                result = requests.get('https://{}/servers_backends'.format(server), timeout=TIMEOUT, verify=False)
                 if result.status_code == 200:
                     startup_info = json.loads(result.text)
                     servers.update(set(startup_info['servers']))

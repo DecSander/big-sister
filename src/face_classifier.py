@@ -27,7 +27,7 @@ def startup():
     for server in servers:
         url = 'https://{}/users'.format(server)
         try:
-            result = requests.get(url)
+            result = requests.get(url, verify=False)
             if result.status_code == 200:
                 users = result.json()
                 for user in users:
@@ -95,8 +95,10 @@ def parse_face_encodings_str(s):
 
 @app.route('/new', methods=['POST'])
 @handle_errors
-@require_json({'fb_id': str, 'fb_short_token': str})
-def new_user(fb_id, fb_short_token):
+@require_json({'fb_short_token': str})
+def new_user(fb_short_token):
+    fb_id = fb_get_id(fb_short_token)
+
     conn = sqlite3.connect(FC_DB)
     c = conn.cursor()
     c.execute("SELECT * FROM users WHERE fb_id = ?", (fb_id,))
@@ -110,9 +112,7 @@ def new_user(fb_id, fb_short_token):
         }
         return jsonify(user)
 
-    # TODO: REMOVE THIS
-    fb_long_token = fb_short_token
-    # fb_long_token = fb_get_long_lived_token(fb_short_token)
+    fb_long_token = fb_get_long_lived_token(fb_short_token)
     name = fb_get_user_name(fb_id, fb_long_token)
     face_encodings = fb_get_user_photos_encodings(fb_id, fb_long_token)
     face_encodings_str = repr(map(lambda x: x.tostring(), face_encodings))
@@ -139,6 +139,19 @@ def fb_get_long_lived_token(fb_short_token):
         if result.status_code != 200:
             print result.json()
         return result.json()['access_token']
+    except Exception as e:
+        print e
+
+
+def fb_get_id(fb_token):
+    url = 'https://graph.facebook.com/me'
+    payload = {'access_token': fb_token}
+    try:
+        result = requests.get(url, params=payload)
+        if result.status_code == 200:
+            fb_id = result.json()['id']
+            return fb_id
+        logger.warning('Failed to get user id:' + result.text)
     except Exception as e:
         print e
 

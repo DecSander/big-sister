@@ -113,7 +113,8 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time, seen_uui
                                        'camera_count': camera_count,
                                        'photo_time': photo_time,
                                        'img_id': seen_uuid
-                                       })
+                                       },
+                                       verify=False)
                 if result.status_code != 200:
                     print result.json()
             except requests.exceptions.ConnectionError:
@@ -152,7 +153,7 @@ def save_backend(backend):
 def notify_new_server(servers):
     for server in servers:
         try:
-            result = requests.post('https://{}/new_server'.format(server), json={'ip_address': MY_IP})
+            result = requests.post('https://{}/new_server'.format(server), json={'ip_address': MY_IP}, verify=False)
             if result.status_code != 200:
                 logger.warning('New server notification for server {} failed: {}'.format(server, result.text))
         except requests.exceptions.ConnectionError:
@@ -225,8 +226,8 @@ def get_faces(imagefile, face_classifiers):
     return []
 
 
-def register_user(face_classifiers, fb_id, fb_short_token):
-    payload = {'fb_id': fb_id, 'fb_short_token': fb_short_token}
+def register_user(face_classifiers, fb_short_token):
+    payload = {'fb_short_token': fb_short_token}
     for fc in face_classifiers:
         try:
             print fc
@@ -282,7 +283,7 @@ def broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodi
                                        'fb_token': fb_token,
                                        'name': name,
                                        'face_encodings_str': face_encodings_str
-                                       })
+                                       }, verify=False)
                 if result.status_code != 200:
                     print result.content
             except requests.exceptions.ConnectionError:
@@ -307,7 +308,6 @@ def broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodi
 def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
     global all_seen_uuids
     for server in servers:
-        print 'asdfasdfasdf {}'.format(server)
         if MY_IP != server:
             try:
                 seen_uuid = uuid.uuid4().hex if seen_uuid is None else seen_uuid
@@ -319,7 +319,7 @@ def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
                                        'camera_id': camera_id,
                                        'fb_id': fb_id,
                                        'sighting_id': seen_uuid
-                                       })
+                                       }, verify=False)
                 if result.status_code != 200:
                     print result.content
             except requests.exceptions.ConnectionError:
@@ -332,8 +332,7 @@ def get_sightings(room=None, timestamp=None):
 
     if room is None:
         recent_sightings = {}
-        c.execute("SELECT camera_id, name FROM face_sightings JOIN users;")
-        # c.execute("SELECT camera_id, name FROM face_sightings JOIN users WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-2 hours');")
+        c.execute("SELECT camera_id, name FROM face_sightings JOIN users ON face_sightings.fb_id = users.fb_id WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-30 minutes');")
         for camera_id, name in c.fetchall():
             if camera_id not in recent_sightings:
                 recent_sightings[camera_id] = set([name])
@@ -341,7 +340,7 @@ def get_sightings(room=None, timestamp=None):
                 recent_sightings[camera_id].add(name)
         return {k: list(v) for k, v in recent_sightings.iteritems()}
     else:
-        c.execute("SELECT name FROM face_sightings JOIN users WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-2 hours');")
+        c.execute("SELECT name FROM face_sightings JOIN users ON face_sightings.fb_id = users.fb_id WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-30 minutes');")
         names = set(c.fetchall())
         return list(names)
 

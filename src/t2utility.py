@@ -40,7 +40,7 @@ def resize_image(imagefile):
 def notify_new_backend(servers):
     for server in servers:
         try:
-            result = requests.post('https://{}/new_backend'.format(server), json={'ip_address': MY_IP})
+            result = requests.post('https://{}/new_backend'.format(server), json={'ip_address': MY_IP}, verify=False)
             if result.status_code != 200:
                 logger.warning('New server notification for server {} failed: {}'.format(server, result.text))
         except requests.exceptions.ConnectionError:

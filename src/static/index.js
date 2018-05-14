@@ -153,7 +153,7 @@ function checkLoginState() {
         url: '/fb_login',
         type: 'POST',
         contentType: 'application/json',
-        body: JSON.stringify({auth: response.authResponse.accessToken})
+        data: JSON.stringify({auth: response.authResponse.accessToken})
       });
     }
   });

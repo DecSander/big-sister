@@ -8,7 +8,7 @@ from flask import Flask, jsonify
 import requests
 
 from const import servers
-from decorators import handle_errors, require_form
+from decorators import handle_errors, require_json
 
 logging.basicConfig(filename='occupancy_predictor.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
@@ -33,10 +33,12 @@ def mean(l):
 
 
 @app.route('/', methods=['POST'])
-@require_form({'timestamp': int, 'camera_id': int})
+@require_json({'timestamp': int, 'camera_id': int})
 @handle_errors
 def predict_occupancy(timestamp, camera_id):
+    print timestamp, camera_id
     if not history or camera_id not in history:
+        print "history not initialized ({}) or camera not found".format(not history)
         return jsonify({"error": "History is not initialized for this camera, cannot infer"}), 400
 
     hist_data = history[camera_id]
@@ -76,10 +78,11 @@ def get_history():
     global unsorted_history
     for server in servers:
         try:
-            data = requests.get('https://{}/history'.format(server))
+            data = requests.get('https://{}/history'.format(server), verify=False)
             if data.status_code == 200:
                 try:
                     hist_db_data = json.loads(data.text)
+                    
                     for c_id, count, timestamp in hist_db_data:
                         if c_id not in unsorted_history:
                             unsorted_history[c_id] = set([(count, timestamp)])

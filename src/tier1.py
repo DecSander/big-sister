@@ -116,7 +116,7 @@ def current_counts():
     recent_sightings = get_sightings()
     counts_info = dict(most_recent_counts)
     for room in counts_info.keys():
-        counts_info[room]['sightings'] = recent_sightings[room] if room in recent_sightings else []
+        counts_info[room]['sightings'] = list(set(recent_sightings[room])) if room in recent_sightings else []
     return jsonify(counts_info)
 
 
@@ -161,10 +161,10 @@ def rooms_list():
 
 @app.route('/fb_login', methods=['POST'])
 @handle_errors
-@require_json({'fb_id': str, 'fb_short_token': str})
-def fb_login(fb_id, fb_short_token):
+@require_json({'auth': str})
+def fb_login(auth):
     # Check if user already exists instead of always broadcasting?
-    user = register_user(face_classifiers, fb_id, fb_short_token)
+    user = register_user(face_classifiers, auth)
     broadcast_user(
         servers,
         face_classifiers,
