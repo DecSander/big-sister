@@ -40,6 +40,7 @@ function handleSingleRoom(room_id, room) {
   $('#room-id').text('Room ' + room_id);
   $('#room-count').text('Occupancy: ' + room.camera_count);
   $('#room-time').text(formatTime(room.photo_time));
+  $('#people-names').text('People: ', room.sightings.join(', '))
 }
 
 function handleAllCounts(data, setValues) {
@@ -47,6 +48,7 @@ function handleAllCounts(data, setValues) {
     var first_room = Object.keys(data)[0];
     $('#room-id').text(first_room);
     $('#room-count').text(data[first_room].camera_count);
+    $('#people-names').text(data[first_room].sightings.join(', '));
   }
   createDropdown(Object.keys(data));
 }
@@ -88,6 +90,7 @@ function refresh() {
   $('#room-id').text('');
   $('#room-count').text('');
   $('#room-time').text('');
+  $('#people-names').text('');
   $.ajax({
     url: '/counts',
     type: 'GET',
