@@ -27,7 +27,7 @@ def startup():
     for server in servers:
         url = 'https://{}/users'.format(server)
         try:
-            result = requests.get(url, verify=False)
+            result = requests.get(url)
             if result.status_code == 200:
                 users = result.json()
                 for user in users:

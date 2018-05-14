@@ -108,7 +108,6 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time, seen_uui
                 all_seen_uuids.add(seen_uuid)
                 result = requests.post('https://{}/update_camera'.format(server),
                                        timeout=TIMEOUT,
-                                       verify=False,
                                        json={
                                        'camera_id': camera_id,
                                        'camera_count': camera_count,
@@ -153,7 +152,7 @@ def save_backend(backend):
 def notify_new_server(servers):
     for server in servers:
         try:
-            result = requests.post('https://{}/new_server'.format(server), verify=False, json={'ip_address': MY_IP})
+            result = requests.post('https://{}/new_server'.format(server), json={'ip_address': MY_IP})
             if result.status_code != 200:
                 logger.warning('New server notification for server {} failed: {}'.format(server, result.text))
         except requests.exceptions.ConnectionError:
@@ -278,7 +277,6 @@ def broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodi
             try:
                 result = requests.post('https://{}/update_user'.format(server),
                                        timeout=TIMEOUT,
-                                       verify=False,
                                        json={
                                        'fb_id': fb_id,
                                        'fb_token': fb_token,
@@ -316,7 +314,6 @@ def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
                 all_seen_uuids.add(seen_uuid)
                 result = requests.post('https://{}/update_sighting'.format(server),
                                        timeout=TIMEOUT,
-                                       verify=False,
                                        json={
                                        'time': time,
                                        'camera_id': camera_id,

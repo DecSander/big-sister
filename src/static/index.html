@@ -60,11 +60,11 @@
             <a id="room-selector" class='dropdown-button btn' data-target='dropdown1'>Select a room</a>
             <ul id='dropdown1' style="text-align: center;" class='dropdown-content'></ul>
             <span class="input-field" style="margin-left: 100px; margin-right: 100px;">
-              <input type="text" id="date" style="color: white; width: 10%;" />
+              <input type="text" id="date" style="color: white; width: 10%;" onblur='changeGetButton()' />
               <label for="date">Date</label>
             </span>
             <span class="input-field">
-              <input type="text" id="time" style="color: white; width: 10%;" />
+              <input type="text" id="time" style="color: white; width: 10%;" onblur='changeGetButton()' />
               <label for="time">Time</label>
             </span>
             <a id="predict" class='btn' style="margin-left: 50px; margin-right: 100px" onclick='getPrediction()'>Get Prediction</a>
