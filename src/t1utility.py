@@ -309,7 +309,6 @@ def broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodi
 def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
     global all_seen_uuids
     for server in servers:
-        print 'asdfasdfasdf {}'.format(server)
         if MY_IP != server:
             try:
                 seen_uuid = uuid.uuid4().hex if seen_uuid is None else seen_uuid
