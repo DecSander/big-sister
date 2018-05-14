@@ -116,7 +116,7 @@ def current_counts():
     recent_sightings = get_sightings()
     counts_info = dict(most_recent_counts)
     for room in counts_info.keys():
-        counts_info[room]['sightings'] = recent_sightings[room] if room in recent_sightings else []
+        counts_info[room]['sightings'] = list(set(recent_sightings[room])) if room in recent_sightings else []
     return jsonify(counts_info)
 
 
