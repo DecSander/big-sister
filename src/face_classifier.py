@@ -6,7 +6,7 @@ import sqlite3
 from flask import Flask, jsonify
 from PIL import Image
 
-from const import FB_APP_ID, FB_APP_SECRET, FACE_COMPARE_THRESHOLD, FC_DB
+from const import FB_APP_ID, FB_APP_SECRET, FACE_COMPARE_THRESHOLD, FC_DB, servers
 from decorators import handle_errors, require_files, require_form, require_json
 
 
@@ -24,8 +24,20 @@ def startup():
     c.execute('CREATE TABLE IF NOT EXISTS users (fb_id TEXT PRIMARY KEY, fb_token TEXT, name TEXT, face_encodings TEXT)')
     conn.commit()
 
-    # TODO: Fetch all users from T1
-    # conn.commit()
+    for server in servers:
+        url = 'https://{}/users'.format(server)
+        try:
+            result = requests.get(url, verify=False)
+            if result.status_code == 200:
+                users = result.json()
+                for user in users:
+                    persist_user(user['fb_id'], user['fb_token'], user['name'], user['face_encodings_str'])
+                return
+            logger.warning('Got non-200 response from {}'.format(server))
+            logger.warning(result.text)
+        except Exception as e:
+            logger.warning('Failed to get users from server {}'.format(server))
+            logger.warning(e)
 
     conn.close()
 
@@ -34,7 +46,6 @@ def startup():
 @handle_errors
 @require_json({'fb_id': str, 'fb_token': str, 'name': str, 'face_encodings_str': str})
 def update_user(fb_id, fb_token, name, face_encodings_str):
-    print 'qwerasdfqwer'
     persist_user(fb_id, fb_token, name, face_encodings_str)
     return jsonify(True)
 
@@ -43,7 +54,6 @@ def update_user(fb_id, fb_token, name, face_encodings_str):
 @handle_errors
 @require_files({'imagefile': 'image/jpeg'})
 def classify_faces(imagefile):
-    print imagefile
     imagefile.seek(0)
     img = Image.open(imagefile)
     encodings = get_face_encodings(img)
@@ -87,11 +97,9 @@ def parse_face_encodings_str(s):
 @handle_errors
 @require_json({'fb_id': str, 'fb_short_token': str})
 def new_user(fb_id, fb_short_token):
-    print 'Received POST to /new'
     conn = sqlite3.connect(FC_DB)
     c = conn.cursor()
     c.execute("SELECT * FROM users WHERE fb_id = ?", (fb_id,))
-    print 'Checking if user [{}] already exists...'.format(fb_id)
     row = c.fetchone()
     if row is not None:
         user = {
@@ -143,7 +151,7 @@ def fb_get_user_name(fb_user_id, fb_token):
         if result.status_code == 200:
             name = result.json()['name']
             return name
-        logger.warn('Failed to get user name:' + result.text)
+        logger.warning('Failed to get user name:' + result.text)
     except Exception as e:
         print e
 
@@ -180,7 +188,7 @@ def fb_get_tagged_photo_ids(fb_user_id, fb_token, limit=14):
             data = result.json()['data']
             ids = map(lambda x: x['id'], data)
             return ids
-        logger.warn('Failed to get tagged photo ids:' + result.text)
+        logger.warning('Failed to get tagged photo ids:' + result.text)
     except Exception as e:
         print e
 
@@ -199,7 +207,7 @@ def url_to_image(url, payload=None):
         if result.status_code == 200:
             img = Image.open(result.raw)
             return img
-        logger.warn('Failed to get image from url:' + result.text)
+        logger.warning('Failed to get image from url:' + result.text)
     except Exception as e:
         print e
 

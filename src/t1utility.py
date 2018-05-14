@@ -329,6 +329,42 @@ def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
                 logger.info('Failed to send sighting to {}'.format(server))
 
 
+def get_sightings(room=None, timestamp=None):
+    conn = sqlite3.Connection(TIER1_DB)
+    c = conn.cursor()
+
+    if room is None:
+        recent_sightings = {}
+        c.execute("SELECT camera_id, name FROM face_sightings JOIN users;")
+        # c.execute("SELECT camera_id, name FROM face_sightings JOIN users WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-2 hours');")
+        for camera_id, name in c.fetchall():
+            if camera_id not in recent_sightings:
+                recent_sightings[camera_id] = set([name])
+            else:
+                recent_sightings[camera_id].add(name)
+        return {k: list(v) for k, v in recent_sightings.iteritems()}
+    else:
+        c.execute("SELECT name FROM face_sightings JOIN users WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-2 hours');")
+        names = set(c.fetchall())
+        return list(names)
+
+
+def get_all_users():
+    conn = sqlite3.Connection(TIER1_DB)
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM users")
+    rows = c.fetchall()
+
+    users = [{
+        'fb_id': fb_id,
+        'fb_token': fb_token,
+        'name': name,
+        'face_encodings_str': face_encodings_str,
+    } for fb_id, fb_token, name, face_encodings_str in rows]
+    return users
+
+
 def bootup_tier1(counts, servers, backends):
     setup_db_tier1(counts, servers, backends)
     retrieve_startup_info(servers, backends, counts, TIER1_DB)
