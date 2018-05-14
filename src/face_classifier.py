@@ -34,6 +34,7 @@ def startup():
 @handle_errors
 @require_json({'fb_id': str, 'fb_token': str, 'name': str, 'face_encodings_str': str})
 def update_user(fb_id, fb_token, name, face_encodings_str):
+    print 'qwerasdfqwer'
     persist_user(fb_id, fb_token, name, face_encodings_str)
     return jsonify(True)
 
@@ -42,6 +43,7 @@ def update_user(fb_id, fb_token, name, face_encodings_str):
 @handle_errors
 @require_files({'imagefile': 'image/jpeg'})
 def classify_faces(imagefile):
+    print imagefile
     imagefile.seek(0)
     img = Image.open(imagefile)
     encodings = get_face_encodings(img)
@@ -178,7 +180,7 @@ def fb_get_tagged_photo_ids(fb_user_id, fb_token, limit=14):
             data = result.json()['data']
             ids = map(lambda x: x['id'], data)
             return ids
-        logger.warn('Failed to get tagged photo ids:' + response.text)
+        logger.warn('Failed to get tagged photo ids:' + result.text)
     except Exception as e:
         print e
 
@@ -211,9 +213,12 @@ def get_face_encodings(img):
 def persist_user(fb_id, fb_token, name, face_encodings_str):
     conn = sqlite3.connect(FC_DB)
     c = conn.cursor()
-    c.execute('INSERT INTO users values (?, ?, ?, ?);', (fb_id, fb_token, name, face_encodings_str))
-    conn.commit()
-    conn.close()
+    try:
+        c.execute('INSERT INTO users values (?, ?, ?, ?);', (fb_id, fb_token, name, face_encodings_str))
+        conn.commit()
+        conn.close()
+    except sqlite3.IntegrityError:
+        pass
 
 
 def main():

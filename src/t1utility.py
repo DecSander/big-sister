@@ -163,6 +163,7 @@ def notify_new_server(servers):
 def get_camera_count(imagefile, backends):
     imagefile_contents = imagefile.read()
     for backend in backends:
+        print 'backend {}'.format(backend)
         try:
             imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')
             result = requests.post('http://{}:5001'.format(backend), files={'imagefile': imagefile_str})
@@ -209,20 +210,20 @@ def upload_file_to_s3(file, camera_id, photo_time, camera_count):
 
 
 def get_faces(imagefile, face_classifiers):
-    imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')
-    files = {'imagefile': imagefile_str}
+    imagefile_contents = imagefile.read()
     for fc in face_classifiers:
         try:
             print 'Posting to fc {}'.format(fc)
-            result = requests.post('http://{}/'.format(fc), files=files)
+            imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')
+            result = requests.post('http://{}/'.format(fc), files={'imagefile': imagefile_str})
             if result.status_code == 200:
-                return json.loads(response.text)
+                return json.loads(result.text)
             print result.text
         except Exception as e:
             logger.info('Failed to get face classification from {}'.format(fc))
             logger.info("Error: " + str(e))
     logger.info("Failed to reach any face classifiers")
-    return None
+    return []
 
 
 def register_user(face_classifiers, fb_id, fb_short_token):
@@ -250,15 +251,15 @@ def persist_user(fb_id, fb_token, name, face_encodings_str):
         conn.commit()
         conn.close()
         return True
-    except Exception as e:
-        logger.info('Failed to persist user: {}'.format(e))
+    except sqlite3.IntegrityError:  # User already exists in database
+        pass
     conn.close()
     return False
 
 
 def persist_sighting(tme, camera_id, fb_id, most_recent_sightings, sighting_id=None):
     if sighting_id in all_seen_uuids:
-        return
+        return False
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
     c.execute('INSERT INTO face_sightings values (?, ?, ?);', (tme, camera_id, fb_id))
@@ -291,9 +292,8 @@ def broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodi
     for fc in face_classifiers:
         if MY_IP != fc:
             try:
-                result = requests.post('https://{}/update_user'.format(fc),
+                result = requests.post('http://{}/update_user'.format(fc),
                                        timeout=TIMEOUT,
-                                       verify=False,
                                        json={
                                        'fb_id': fb_id,
                                        'fb_token': fb_token,
@@ -309,11 +309,12 @@ def broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodi
 def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
     global all_seen_uuids
     for server in servers:
+        print 'asdfasdfasdf {}'.format(server)
         if MY_IP != server:
             try:
                 seen_uuid = uuid.uuid4().hex if seen_uuid is None else seen_uuid
                 all_seen_uuids.add(seen_uuid)
-                result = requests.post('https://{}/update_user'.format(server),
+                result = requests.post('https://{}/update_sighting'.format(server),
                                        timeout=TIMEOUT,
                                        verify=False,
                                        json={

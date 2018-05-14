@@ -38,9 +38,9 @@ def update_user(fb_id, fb_token, name, face_encodings_str):
 @app.route('/update_sighting', methods=['POST'])
 @handle_errors
 @require_json({'time': float, 'camera_id': int, 'fb_id': str, 'sighting_id': str})
-def update_sighting(time, camera_id, fb_id):
-    if persist_sighting(time, camera_id, fb_id):
-        broadcast_sighting(time, camera_id, fb_id)
+def update_sighting(time, camera_id, fb_id, sighting_id):
+    if persist_sighting(time, camera_id, fb_id, most_recent_sightings, sighting_id):
+        broadcast_sighting(servers, time, camera_id, fb_id)
     return jsonify(True)
 
 
@@ -56,9 +56,11 @@ def upload_file(imagefile, camera_id, photo_time):
 
     if imagefile is not None:
         camera_count = get_camera_count(imagefile, backends)
+        imagefile.seek(0)
         fb_ids = get_faces(imagefile, face_classifiers)
         for fb_id in fb_ids:
-            persist_sighting(photo_time, camera_id, fb_id)
+            print fb_id
+            persist_sighting(photo_time, camera_id, fb_id, most_recent_sightings)
             broadcast_sighting(servers, photo_time, camera_id, fb_id)
     else:
         camera_count = most_recent_counts[camera_id]["camera_count"]
