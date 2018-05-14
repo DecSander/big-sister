@@ -5,6 +5,7 @@ from collections import defaultdict
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction, get_counts_at_time
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
 from t1utility import fb_get_long_lived_token, register_user, cache_sighting, compare_all
+from t1utility import send_to_other_servers
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
 from const import servers, backends, IP_REGEX, occupancy_predictors
@@ -20,6 +21,7 @@ most_recent_sightings = defaultdict(dict)
 @require_json({'camera_id': int, 'camera_count': int, 'photo_time': float, 'img_id': str})
 def update_camera_value(camera_id, camera_count, photo_time, img_id):
     if temp_store(most_recent_counts, camera_id, camera_count, photo_time):
+        send_to_other_servers(servers, camera_id, camera_count, img_id)
         persist(camera_id, camera_count, photo_time, img_id)
     return jsonify(True)
 

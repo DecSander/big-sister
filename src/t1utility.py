@@ -5,7 +5,6 @@ from StringIO import StringIO
 import json
 import boto3
 import uuid
-# import face_recognition as fr
 from PIL import Image
 import numpy as np
 import time
@@ -101,15 +100,16 @@ def get_last_data(camera_id=None):
     return camera_rows
 
 
-def send_to_other_servers(servers, camera_id, camera_count, photo_time):
+def send_to_other_servers(servers, camera_id, camera_count, photo_time, seen_uuid=None):
     global all_seen_uuids
     for server in servers:
         if MY_IP != server:
             try:
-                seen_uuid = uuid.uuid4().hex
+                seen_uuid = uuid.uuid4().hex if seen_uuid is None else seen_uuid
                 all_seen_uuids.add(seen_uuid)
-                result = requests.post('http://{}/update_camera'.format(server),
+                result = requests.post('https://{}/update_camera'.format(server),
                                        timeout=TIMEOUT,
+                                       verify=False,
                                        json={
                                        'camera_id': camera_id,
                                        'camera_count': camera_count,
@@ -122,9 +122,9 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time):
                 logger.info('Failed to send count to {}'.format(server))
 
 
-def temp_store(counts, camera_id, camera_count, photo_time):
-    should_update = ('camera_id' not in counts) or (counts['camera_id'] < photo_time)
-    if should_update:
+def temp_store(counts, camera_id, camera_count, photo_time, seen_uuid=None):
+    should_update = (('camera_id' not in counts) or (counts['camera_id'] < photo_time)) and seen_uuid not in all_seen_uuids
+    if should_update or seen_uuid is None:
         counts[camera_id] = {
             'camera_count': camera_count,
             'photo_time': photo_time
@@ -151,7 +151,7 @@ def save_backend(backend):
 def notify_new_server(servers):
     for server in servers:
         try:
-            result = requests.post('http://{}/new_server'.format(server), json={'ip_address': MY_IP})
+            result = requests.post('https://{}/new_server'.format(server), verify=False, json={'ip_address': MY_IP})
             if result.status_code != 200:
                 logger.warning('New server notification for server {} failed: {}'.format(server, result.text))
         except requests.exceptions.ConnectionError:

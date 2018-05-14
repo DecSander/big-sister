@@ -76,7 +76,7 @@ def get_history():
     global unsorted_history
     for server in servers:
         try:
-            data = requests.get('http://{}/history'.format(server))
+            data = requests.get('https://{}/history'.format(server), verify=False)
             if data.status_code == 200:
                 try:
                     hist_db_data = json.loads(data.text)
