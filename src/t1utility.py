@@ -271,7 +271,7 @@ def persist_sighting(tme, camera_id, fb_id, most_recent_sightings, sighting_id=N
     conn.close()
 
 
-def broadcast_user(servers, fb_id, fb_token, name, face_encodings_str):
+def broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodings_str):
     for server in servers:
         if MY_IP != server:
             try:
@@ -281,13 +281,29 @@ def broadcast_user(servers, fb_id, fb_token, name, face_encodings_str):
                                        json={
                                        'fb_id': fb_id,
                                        'fb_token': fb_token,
-                                       'photo_time': photo_time,
+                                       'name': name,
                                        'face_encodings_str': face_encodings_str
                                        })
                 if result.status_code != 200:
-                    print result.json()
+                    print result.content
             except requests.exceptions.ConnectionError:
                 logger.info('Failed to send user to {}'.format(server))
+    for fc in face_classifiers:
+        if MY_IP != fc:
+            try:
+                result = requests.post('https://{}/update_user'.format(fc),
+                                       timeout=TIMEOUT,
+                                       verify=False,
+                                       json={
+                                       'fb_id': fb_id,
+                                       'fb_token': fb_token,
+                                       'name': name,
+                                       'face_encodings_str': face_encodings_str
+                                       })
+                if result.status_code != 200:
+                    print result.content
+            except requests.exceptions.ConnectionError:
+                logger.info('Failed to send user to {}'.format(fc))
 
 
 def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
@@ -307,7 +323,7 @@ def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
                                        'sighting_id': seen_uuid
                                        })
                 if result.status_code != 200:
-                    print result.json()
+                    print result.content
             except requests.exceptions.ConnectionError:
                 logger.info('Failed to send sighting to {}'.format(server))
 

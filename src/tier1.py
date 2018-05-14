@@ -31,7 +31,7 @@ def update_camera_value(camera_id, camera_count, photo_time, img_id):
 @require_json({'fb_id': str, 'fb_token': str, 'name': str, 'face_encodings_str': str})
 def update_user(fb_id, fb_token, name, face_encodings_str):
     if persist_user(fb_id, fb_token, name, face_encodings_str):
-        broadcast_user(servers + face_classifiers, fb_id, fb_token, name, face_encodings_str)
+        broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodings_str)
     return jsonify(True)
 
 
@@ -158,13 +158,14 @@ def rooms_list():
 def fb_login(fb_id, fb_short_token):
     print 'asdfasdfasdf'
     user = register_user(face_classifiers, fb_id, fb_short_token)
-    if user is not None and persist_user(fb_id, user['fb_token'], user['name'], user['face_encodings_str']):
-        broadcast_user(
-            servers + face_classifiers,
-            user['fb_id'],
-            user['fb_token'],
-            user['name'],
-            user['face_encodings_str'])
+    # if user is not None and persist_user(fb_id, user['fb_token'], user['name'], user['face_encodings_str']):
+    broadcast_user(
+        servers,
+        face_classifiers,
+        user['fb_id'],
+        user['fb_token'],
+        user['name'],
+        user['face_encodings_str'])
     return jsonify(user)
 
 

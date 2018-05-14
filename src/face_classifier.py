@@ -88,11 +88,17 @@ def new_user(fb_id, fb_short_token):
     print 'Received POST to /new'
     conn = sqlite3.connect(FC_DB)
     c = conn.cursor()
-    c.execute("SELECT fb_id FROM users WHERE fb_id = ?", (fb_id,))
+    c.execute("SELECT * FROM users WHERE fb_id = ?", (fb_id,))
     print 'Checking if user [{}] already exists...'.format(fb_id)
-    user = c.fetchone()
-    if user is not None:
-        return jsonify(None)
+    row = c.fetchone()
+    if row is not None:
+        user = {
+            'fb_id': row[0],
+            'fb_token': row[1],
+            'name': row[2],
+            'face_encodings_str': row[3]
+        }
+        return jsonify(user)
 
     # TODO: REMOVE THIS
     fb_long_token = fb_short_token
