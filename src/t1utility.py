@@ -6,11 +6,10 @@ import json
 import boto3
 import uuid
 from PIL import Image
-import numpy as np
 import time
 
 from utility import retrieve_startup_info
-from const import TIER1_DB, MY_IP, TIMEOUT, FB_APP_ID, FB_APP_SECRET, FACE_COMPARE_THRESHOLD
+from const import TIER1_DB, MY_IP, TIMEOUT
 
 logging.basicConfig(filename='t1.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
@@ -109,7 +108,6 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time, seen_uui
                 all_seen_uuids.add(seen_uuid)
                 result = requests.post('https://{}/update_camera'.format(server),
                                        timeout=TIMEOUT,
-                                       verify=False,
                                        json={
                                        'camera_id': camera_id,
                                        'camera_count': camera_count,
@@ -123,7 +121,8 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time, seen_uui
 
 
 def temp_store(counts, camera_id, camera_count, photo_time, seen_uuid=None):
-    should_update = (('camera_id' not in counts) or (counts['camera_id'] < photo_time)) and seen_uuid not in all_seen_uuids
+    should_update = (('camera_id' not in counts) or (
+        counts['camera_id'] < photo_time)) and seen_uuid not in all_seen_uuids
     if should_update or seen_uuid is None:
         counts[camera_id] = {
             'camera_count': camera_count,
@@ -153,7 +152,7 @@ def save_backend(backend):
 def notify_new_server(servers):
     for server in servers:
         try:
-            result = requests.post('https://{}/new_server'.format(server), verify=False, json={'ip_address': MY_IP})
+            result = requests.post('https://{}/new_server'.format(server), json={'ip_address': MY_IP})
             if result.status_code != 200:
                 logger.warning('New server notification for server {} failed: {}'.format(server, result.text))
         except requests.exceptions.ConnectionError:
@@ -163,6 +162,7 @@ def notify_new_server(servers):
 def get_camera_count(imagefile, backends):
     imagefile_contents = imagefile.read()
     for backend in backends:
+        print 'backend {}'.format(backend)
         try:
             imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')
             result = requests.post('http://{}:5001'.format(backend), files={'imagefile': imagefile_str})
@@ -182,7 +182,7 @@ def get_prediction(camera_id, timestamp, occupancy_predictors):
     payload = {"camera_id": camera_id, "timestamp": timestamp}
     for oc in occupancy_predictors:
         try:
-            response = requests.post("http://" + oc, data=payload)
+            response = requests.post("http://" + oc, json=payload)
             if response.status_code == 200:
                 return json.loads(response.text)
             elif response.status_code == 204:
@@ -208,75 +208,57 @@ def upload_file_to_s3(file, camera_id, photo_time, camera_count):
         print e
 
 
-def compare_all(imagefile, backends):
-    conn = sqlite3.connect(TIER1_DB)
-    c = conn.cursor()
-
-    # Check cached users for matching face
+def get_faces(imagefile, face_classifiers):
     imagefile_contents = imagefile.read()
-
-    imagefile.seek(0)
-    img = Image.open(imagefile)
-    array = np.array(img)
-    unknown = fr.face_encodings(array)[0]
-
-    closest_distance = 1.0
-    closest_row = ''
-    for row in c.execute('SELECT * FROM users'):
-        known_encodings = parse_face_encodings_str(row[3])
-        dists = fr.api.face_distance(known_encodings, unknown)
-        min_dist = min(dists)
-        if closest_distance > min_dist:
-            closest_distance = min_dist
-            closest_row = row
-
-    # Check backend if no matching face found
-    if closest_distance > FACE_COMPARE_THRESHOLD:
-        for backend in backends:  # TODO: Don't query all backends?
-            try:
-                imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')
-                result = requests.post(
-                    'http://{}:5001/identify_face'.format(backend),
-                    files={'imagefile': imagefile_str})
-                if result.status_code != 200:
-                    print result.text
-                user = result.json()
-            except Exception as e:
-                print 'Failed to post: {}'.format(e)
-                user = None
-    else:
-        user = {
-            'fb_id': closest_row[0],
-            'fb_token': closest_row[1],
-            'name': closest_row[2],
-            'face_encodings_str': closest_row[3],
-        }
-    return user
-
-
-def register_user(backends, fb_user_id, fb_long_token):
-    json = {'fb_user_id': fb_user_id, 'fb_long_token': fb_long_token}
-    for backend in backends:
+    for fc in face_classifiers:
         try:
-            result = requests.post('http://{}/new_user'.format(backend), json)
-            if result.status_code != 200:
-                print result.text
-            user = result.json()
-            cache_user(fb_user_id, fb_long_token, user['name'], user['face_encodings_str'])
-            return user
+            print 'Posting to fc {}'.format(fc)
+            imagefile_str = ('imagefile', StringIO(imagefile_contents), 'image/jpeg')
+            result = requests.post('http://{}/'.format(fc), files={'imagefile': imagefile_str})
+            if result.status_code == 200:
+                return json.loads(result.text)
+            print result.text
         except Exception as e:
-            print e
+            logger.info('Failed to get face classification from {}'.format(fc))
+            logger.info("Error: " + str(e))
+    logger.info("Failed to reach any face classifiers")
+    return []
 
 
-def cache_user(fb_id, fb_token, name, face_encodings_str):
+def register_user(face_classifiers, fb_id, fb_short_token):
+    payload = {'fb_id': fb_id, 'fb_short_token': fb_short_token}
+    for fc in face_classifiers:
+        try:
+            print fc
+            result = requests.post('http://{}/new'.format(fc), json=payload)
+            if result.status_code == 200:
+                user = result.json()
+                return user
+            logger.info('Received non-200 response from {}'.format(fc))
+            logger.info('Response: {}'.format(result.text))
+        except Exception as e:
+            logger.info('Failed to create user from {}'.format(fc))
+            logger.info('Error: {}'.format(e))
+    return None
+
+
+def persist_user(fb_id, fb_token, name, face_encodings_str):
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
-    c.execute('INSERT INTO users values (?, ?, ?, ?);', (fb_id, fb_token, name, face_encodings_str))
-    conn.commit()
+    try:
+        c.execute('INSERT INTO users values (?, ?, ?, ?);', (fb_id, fb_token, name, face_encodings_str))
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:  # User already exists in database
+        pass
     conn.close()
+    return False
 
 
-def cache_sighting(tme, camera_id, fb_id, most_recent_sightings):
+def persist_sighting(tme, camera_id, fb_id, most_recent_sightings, sighting_id=None):
+    if sighting_id in all_seen_uuids:
+        return False
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
     c.execute('INSERT INTO face_sightings values (?, ?, ?);', (tme, camera_id, fb_id))
@@ -284,25 +266,100 @@ def cache_sighting(tme, camera_id, fb_id, most_recent_sightings):
         if sighting_time < time.time():
             del most_recent_sightings[person]
     most_recent_sightings[fb_id] = time.time()
+
     conn.commit()
     conn.close()
 
 
-def fb_get_long_lived_token(fb_short_token):
-    url = 'https://graph.facebook.com/oauth/access_token'
-    payload = {
-        'grant_type': 'fb_exchange_token',
-        'client_id': FB_APP_ID,
-        'client_secret': FB_APP_SECRET,
-        'fb_exchange_token': fb_short_token,
-    }
-    try:
-        result = requests.get(url, params=payload)
-        if result.status_code != 200:
-            print result.json()
-        return result.json()['access_token']
-    except Exception as e:
-        print e
+def broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodings_str):
+    for server in servers:
+        if MY_IP != server:
+            try:
+                result = requests.post('https://{}/update_user'.format(server),
+                                       timeout=TIMEOUT,
+                                       json={
+                                       'fb_id': fb_id,
+                                       'fb_token': fb_token,
+                                       'name': name,
+                                       'face_encodings_str': face_encodings_str
+                                       })
+                if result.status_code != 200:
+                    print result.content
+            except requests.exceptions.ConnectionError:
+                logger.info('Failed to send user to {}'.format(server))
+    for fc in face_classifiers:
+        if MY_IP != fc:
+            try:
+                result = requests.post('http://{}/update_user'.format(fc),
+                                       timeout=TIMEOUT,
+                                       json={
+                                       'fb_id': fb_id,
+                                       'fb_token': fb_token,
+                                       'name': name,
+                                       'face_encodings_str': face_encodings_str
+                                       })
+                if result.status_code != 200:
+                    print result.content
+            except requests.exceptions.ConnectionError:
+                logger.info('Failed to send user to {}'.format(fc))
+
+
+def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
+    global all_seen_uuids
+    for server in servers:
+        print 'asdfasdfasdf {}'.format(server)
+        if MY_IP != server:
+            try:
+                seen_uuid = uuid.uuid4().hex if seen_uuid is None else seen_uuid
+                all_seen_uuids.add(seen_uuid)
+                result = requests.post('https://{}/update_sighting'.format(server),
+                                       timeout=TIMEOUT,
+                                       json={
+                                       'time': time,
+                                       'camera_id': camera_id,
+                                       'fb_id': fb_id,
+                                       'sighting_id': seen_uuid
+                                       })
+                if result.status_code != 200:
+                    print result.content
+            except requests.exceptions.ConnectionError:
+                logger.info('Failed to send sighting to {}'.format(server))
+
+
+def get_sightings(room=None, timestamp=None):
+    conn = sqlite3.Connection(TIER1_DB)
+    c = conn.cursor()
+
+    if room is None:
+        recent_sightings = {}
+        c.execute("SELECT camera_id, name FROM face_sightings JOIN users;")
+        # c.execute("SELECT camera_id, name FROM face_sightings JOIN users WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-2 hours');")
+        for camera_id, name in c.fetchall():
+            if camera_id not in recent_sightings:
+                recent_sightings[camera_id] = set([name])
+            else:
+                recent_sightings[camera_id].add(name)
+        return {k: list(v) for k, v in recent_sightings.iteritems()}
+    else:
+        c.execute("SELECT name FROM face_sightings JOIN users WHERE datetime(sighting_time, 'unixepoch', 'localtime') > datetime('now', '-2 hours');")
+        names = set(c.fetchall())
+        return list(names)
+
+
+def get_all_users():
+    conn = sqlite3.Connection(TIER1_DB)
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM users")
+    rows = c.fetchall()
+
+    users = [{
+        'fb_id': fb_id,
+        'fb_token': fb_token,
+        'name': name,
+        'face_encodings_str': face_encodings_str,
+    } for fb_id, fb_token, name, face_encodings_str in rows]
+    return users
 
 
 def bootup_tier1(counts, servers, backends):

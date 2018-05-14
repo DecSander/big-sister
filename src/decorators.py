@@ -30,7 +30,7 @@ def require_json(json_types):
                         try:
                             kwargs[arg] = json_types[arg](json_value[arg])
                         except ValueError:
-                            return jsonify({'error': '{} of type {} could not be cast to type {}'.format(arg, type(json_value[arg]), json_types[arg])}), 400
+                            return jsonify({'error': '{} ({}) of type {} could not be cast to type {}'.format(arg, json_value[arg], type(json_value[arg]), json_types[arg])}), 400
                     elif type(json_value[arg]) != json_types[arg]:
                         return jsonify({'error': '{} of type {} should be type {}'.format(arg, type(json_value[arg]), json_types[arg])}), 400
                     else:

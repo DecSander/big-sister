@@ -4,11 +4,11 @@ from collections import defaultdict
 
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction, get_counts_at_time
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
-from t1utility import fb_get_long_lived_token, register_user, cache_sighting, compare_all
-from t1utility import send_to_other_servers
+from t1utility import register_user, persist_user, persist_sighting, broadcast_user, broadcast_sighting, get_faces
+from t1utility import send_to_other_servers, get_sightings, get_all_users
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
-from const import servers, backends, IP_REGEX, occupancy_predictors
+from const import servers, backends, IP_REGEX, occupancy_predictors, face_classifiers
 
 
 app = Flask(__name__, static_url_path='')
@@ -21,8 +21,26 @@ most_recent_sightings = defaultdict(dict)
 @require_json({'camera_id': int, 'camera_count': int, 'photo_time': float, 'img_id': str})
 def update_camera_value(camera_id, camera_count, photo_time, img_id):
     if temp_store(most_recent_counts, camera_id, camera_count, photo_time, img_id):
-        send_to_other_servers(servers, camera_id, camera_count, img_id)
+        send_to_other_servers(servers, camera_id, camera_count, photo_time, img_id)
         persist(camera_id, camera_count, photo_time, img_id)
+    return jsonify(True)
+
+
+@app.route('/update_user', methods=['POST'])
+@handle_errors
+@require_json({'fb_id': str, 'fb_token': str, 'name': str, 'face_encodings_str': str})
+def update_user(fb_id, fb_token, name, face_encodings_str):
+    if persist_user(fb_id, fb_token, name, face_encodings_str):
+        broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodings_str)
+    return jsonify(True)
+
+
+@app.route('/update_sighting', methods=['POST'])
+@handle_errors
+@require_json({'time': float, 'camera_id': int, 'fb_id': str, 'sighting_id': str})
+def update_sighting(time, camera_id, fb_id, sighting_id):
+    if persist_sighting(time, camera_id, fb_id, most_recent_sightings, sighting_id):
+        broadcast_sighting(servers, time, camera_id, fb_id, sighting_id)
     return jsonify(True)
 
 
@@ -38,6 +56,11 @@ def upload_file(imagefile, camera_id, photo_time):
 
     if imagefile is not None:
         camera_count = get_camera_count(imagefile, backends)
+        imagefile.seek(0)
+        fb_ids = get_faces(imagefile, face_classifiers)
+        for fb_id in fb_ids:
+            persist_sighting(photo_time, camera_id, fb_id, most_recent_sightings)
+            broadcast_sighting(servers, photo_time, camera_id, fb_id)
     else:
         camera_count = most_recent_counts[camera_id]["camera_count"]
 
@@ -90,7 +113,11 @@ def history():
 @app.route("/counts", methods=['GET'])
 @handle_errors
 def current_counts():
-    return jsonify(most_recent_counts)
+    recent_sightings = get_sightings()
+    counts_info = dict(most_recent_counts)
+    for room in counts_info.keys():
+        counts_info[room]['sightings'] = recent_sightings[room] if room in recent_sightings else []
+    return jsonify(counts_info)
 
 
 @app.route("/counts/<room>", methods=['GET'])
@@ -98,7 +125,9 @@ def current_counts():
 def room_count(room):
     room = int(room)
     if room in most_recent_counts:
-        return jsonify(most_recent_counts[room])
+        room_info = dict(most_recent_counts[room])
+        room_info['sightings'] = get_sightings(room)
+        return jsonify(room_info)
     else:
         return jsonify({'error': 'Invalid room'}), 400
 
@@ -130,24 +159,26 @@ def rooms_list():
     return jsonify(most_recent_counts.keys())
 
 
-@app.route('/classify_face', methods=['POST'])
-@handle_errors
-@require_form({'time': float, 'camera_id': int})
-@require_files({'imagefile': 'image/jpeg'})
-def classify_face(time, camera_id, imagefile):
-    user = compare_all(imagefile, backends)
-    if user is not None:
-        cache_sighting(time, camera_id, user['fb_id'], most_recent_sightings)
-    return jsonify(user)  # Or just return jsonify(True) to confirm face received?
-
-
 @app.route('/fb_login', methods=['POST'])
 @handle_errors
 @require_json({'fb_id': str, 'fb_short_token': str})
-def save_user_token(fb_id, fb_short_token):
-    fb_long_token = fb_get_long_lived_token(fb_short_token)
-    user = register_user(backends, fb_id, fb_long_token)
+def fb_login(fb_id, fb_short_token):
+    # Check if user already exists instead of always broadcasting?
+    user = register_user(face_classifiers, fb_id, fb_short_token)
+    broadcast_user(
+        servers,
+        face_classifiers,
+        user['fb_id'],
+        user['fb_token'],
+        user['name'],
+        user['face_encodings_str'])
     return jsonify(user)
+
+
+@app.route('/users', methods=['GET'])
+@handle_errors
+def all_users():
+    return jsonify(get_all_users())
 
 
 @app.route('/', methods=['GET'])
@@ -168,4 +199,4 @@ def send_favicon():
 
 if __name__ == "__main__":
     bootup_tier1(most_recent_counts, servers, backends)
-    app.run(host='0.0.0.0', port=443, threaded=True, ssl_context=('keys/key.crt', 'keys/key.key'))
+    app.run(host='0.0.0.0', port=443, threaded=True, ssl_context=('/etc/letsencrypt/live/bigsister.info/fullchain.pem', '/etc/letsencrypt/live/bigsister.info/privkey.pem'))
