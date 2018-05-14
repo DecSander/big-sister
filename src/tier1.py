@@ -161,10 +161,10 @@ def rooms_list():
 
 @app.route('/fb_login', methods=['POST'])
 @handle_errors
-@require_json({'fb_id': str, 'fb_short_token': str})
-def fb_login(fb_id, fb_short_token):
+@require_json({'auth': str})
+def fb_login(auth):
     # Check if user already exists instead of always broadcasting?
-    user = register_user(face_classifiers, fb_id, fb_short_token)
+    user = register_user(face_classifiers, auth)
     broadcast_user(
         servers,
         face_classifiers,
