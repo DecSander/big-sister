@@ -113,7 +113,8 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time, seen_uui
                                        'camera_count': camera_count,
                                        'photo_time': photo_time,
                                        'img_id': seen_uuid
-                                       })
+                                       },
+                                       verify=False)
                 if result.status_code != 200:
                     print result.json()
             except requests.exceptions.ConnectionError:
@@ -152,7 +153,7 @@ def save_backend(backend):
 def notify_new_server(servers):
     for server in servers:
         try:
-            result = requests.post('https://{}/new_server'.format(server), json={'ip_address': MY_IP})
+            result = requests.post('https://{}/new_server'.format(server), json={'ip_address': MY_IP}, verify=False)
             if result.status_code != 200:
                 logger.warning('New server notification for server {} failed: {}'.format(server, result.text))
         except requests.exceptions.ConnectionError:
@@ -282,7 +283,7 @@ def broadcast_user(servers, face_classifiers, fb_id, fb_token, name, face_encodi
                                        'fb_token': fb_token,
                                        'name': name,
                                        'face_encodings_str': face_encodings_str
-                                       })
+                                       }, verify=False)
                 if result.status_code != 200:
                     print result.content
             except requests.exceptions.ConnectionError:
@@ -319,7 +320,7 @@ def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
                                        'camera_id': camera_id,
                                        'fb_id': fb_id,
                                        'sighting_id': seen_uuid
-                                       })
+                                       }, verify=False)
                 if result.status_code != 200:
                     print result.content
             except requests.exceptions.ConnectionError:

@@ -47,13 +47,18 @@ def require_form(form_types):
             form_value = request.form
             for arg in form_types:
                 if arg not in form_value:
+                    print {'error': '{} not supplied'.format(arg)}
+                    print form_value
+                    print request.get_json()
                     return jsonify({'error': '{} not supplied'.format(arg)}), 400
                 elif form_types[arg] in [float, int, str]:
                     try:
                         kwargs[arg] = form_types[arg](form_value.get(arg, None))
                     except ValueError:
+                        print {'error': '{} of type {} could not be cast to type {}'.format(arg, type(form_value[arg]), form_types[arg])}
                         return jsonify({'error': '{} of type {} could not be cast to type {}'.format(arg, type(form_value[arg]), form_types[arg])}), 400
                 elif type(form_value.get(arg, None)) != form_types[arg]:
+                    print {'error': '{} of type {} should be type {}'.format(arg, type(form_value[arg]), form_types[arg])}
                     return jsonify({'error': '{} of type {} should be type {}'.format(arg, type(form_value[arg]), form_types[arg])}), 400
                 else:
                     kwargs[arg] = form_value.get(arg, None)
