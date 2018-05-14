@@ -6,7 +6,7 @@ import json
 import boto3
 import uuid
 from PIL import Image
-import numpy as np
+import time
 
 from utility import retrieve_startup_info
 from const import TIER1_DB, MY_IP, TIMEOUT
@@ -99,12 +99,12 @@ def get_last_data(camera_id=None):
     return camera_rows
 
 
-def send_to_other_servers(servers, camera_id, camera_count, photo_time):
+def send_to_other_servers(servers, camera_id, camera_count, photo_time, seen_uuid=None):
     global all_seen_uuids
     for server in servers:
         if MY_IP != server:
             try:
-                seen_uuid = uuid.uuid4().hex
+                seen_uuid = uuid.uuid4().hex if seen_uuid is None else seen_uuid
                 all_seen_uuids.add(seen_uuid)
                 result = requests.post('https://{}/update_camera'.format(server),
                                        timeout=TIMEOUT,
@@ -121,13 +121,16 @@ def send_to_other_servers(servers, camera_id, camera_count, photo_time):
                 logger.info('Failed to send count to {}'.format(server))
 
 
-def temp_store(counts, camera_id, camera_count, photo_time):
-    should_update = ('camera_id' not in counts) or (counts['camera_id'] < photo_time)
-    if should_update:
+def temp_store(counts, camera_id, camera_count, photo_time, seen_uuid=None):
+    should_update = (('camera_id' not in counts) or (
+        counts['camera_id'] < photo_time)) and seen_uuid not in all_seen_uuids
+    if should_update or seen_uuid is None:
         counts[camera_id] = {
             'camera_count': camera_count,
             'photo_time': photo_time
         }
+        if seen_uuid is not None:
+            all_seen_uuids.add(seen_uuid)
     return should_update
 
 
@@ -179,7 +182,7 @@ def get_prediction(camera_id, timestamp, occupancy_predictors):
     payload = {"camera_id": camera_id, "timestamp": timestamp}
     for oc in occupancy_predictors:
         try:
-            response = requests.post("http://" + oc, data=payload)
+            response = requests.post("http://" + oc, json=payload)
             if response.status_code == 200:
                 return json.loads(response.text)
             elif response.status_code == 204:
@@ -210,6 +213,7 @@ def get_faces(imagefile, face_classifiers):
     files = {'imagefile': imagefile_str}
     for fc in face_classifiers:
         try:
+            print 'Posting to fc {}'.format(fc)
             result = requests.post('http://{}/'.format(fc), files=files)
             if result.status_code == 200:
                 return json.loads(response.text)
@@ -217,35 +221,53 @@ def get_faces(imagefile, face_classifiers):
         except Exception as e:
             logger.info('Failed to get face classification from {}'.format(fc))
             logger.info("Error: " + str(e))
+    logger.info("Failed to reach any face classifiers")
+    return None
 
 
-def register_user(servers, face_classifiers, fb_user_id, fb_short_token):
-    json = {'fb_user_id': fb_user_id, 'fb_short_token': fb_short_token}
+def register_user(face_classifiers, fb_id, fb_short_token):
+    payload = {'fb_id': fb_id, 'fb_short_token': fb_short_token}
     for fc in face_classifiers:
         try:
-            result = requests.post('http://{}/new_user'.format(fc), json)
+            print fc
+            result = requests.post('http://{}/new'.format(fc), json=payload)
             if result.status_code == 200:
-                print result.text
                 user = result.json()
                 return user
-            print result.text
+            logger.info('Received non-200 response from {}'.format(fc))
+            logger.info('Response: {}'.format(result.text))
         except Exception as e:
-            logger.info('Failed to get create user from {}'.format(fc))
-            logger.info("Error: " + str(e))
+            logger.info('Failed to create user from {}'.format(fc))
+            logger.info('Error: {}'.format(e))
+    return None
 
 
 def persist_user(fb_id, fb_token, name, face_encodings_str):
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
-    c.execute('INSERT INTO users values (?, ?, ?, ?);', (fb_id, fb_token, name, face_encodings_str))
-    conn.commit()
+    try:
+        c.execute('INSERT INTO users values (?, ?, ?, ?);', (fb_id, fb_token, name, face_encodings_str))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logger.info('Failed to persist user: {}'.format(e))
     conn.close()
+    return False
 
 
-def persist_sighting(servers, time, camera_id, fb_id):
+def persist_sighting(tme, camera_id, fb_id, most_recent_sightings, sighting_id=None):
+    if sighting_id in all_seen_uuids:
+        return
     conn = sqlite3.connect(TIER1_DB)
     c = conn.cursor()
-    c.execute('INSERT INTO face_sightings values (?, ?, ?);', (time, camera_id, fb_id))
+    c.execute('INSERT INTO face_sightings values (?, ?, ?);', (tme, camera_id, fb_id))
+
+    for person, sighting_time in most_recent_sightings.items():
+        if sighting_time < time.time():
+            del most_recent_sightings[person]
+    most_recent_sightings[fb_id] = time.time()
+
     conn.commit()
     conn.close()
 
@@ -269,10 +291,13 @@ def broadcast_user(servers, fb_id, fb_token, name, face_encodings_str):
                 logger.info('Failed to send user to {}'.format(server))
 
 
-def broadcast_sighting(servers, time, camera_id, fb_id):
+def broadcast_sighting(servers, time, camera_id, fb_id, seen_uuid=None):
+    global all_seen_uuids
     for server in servers:
         if MY_IP != server:
             try:
+                seen_uuid = uuid.uuid4().hex if seen_uuid is None else seen_uuid
+                all_seen_uuids.add(seen_uuid)
                 result = requests.post('https://{}/update_user'.format(server),
                                        timeout=TIMEOUT,
                                        verify=False,
@@ -280,6 +305,7 @@ def broadcast_sighting(servers, time, camera_id, fb_id):
                                        'time': time,
                                        'camera_id': camera_id,
                                        'fb_id': fb_id,
+                                       'sighting_id': seen_uuid
                                        })
                 if result.status_code != 200:
                     print result.json()

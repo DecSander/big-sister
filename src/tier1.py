@@ -1,9 +1,11 @@
 from flask import Flask, jsonify, send_from_directory, request
 import time
+from collections import defaultdict
 
 from t1utility import temp_store, persist, bootup_tier1, get_camera_count, get_prediction, get_counts_at_time
 from t1utility import process_image, save_backend, logger, upload_file_to_s3, get_last_data
-from t1utility import fb_get_long_lived_token, register_user, persist_sighting, get_faces
+from t1utility import register_user, persist_user, persist_sighting, broadcast_user, broadcast_sighting, get_faces
+from t1utility import send_to_other_servers
 from utility import save_server
 from decorators import handle_errors, require_json, require_files, require_form, validate_regex
 from const import servers, backends, IP_REGEX, occupancy_predictors, face_classifiers
@@ -11,13 +13,15 @@ from const import servers, backends, IP_REGEX, occupancy_predictors, face_classi
 
 app = Flask(__name__, static_url_path='')
 most_recent_counts = {}
+most_recent_sightings = defaultdict(dict)
 
 
 @app.route('/update_camera', methods=['POST'])
 @handle_errors
 @require_json({'camera_id': int, 'camera_count': int, 'photo_time': float, 'img_id': str})
 def update_camera_value(camera_id, camera_count, photo_time, img_id):
-    if temp_store(most_recent_counts, camera_id, camera_count, photo_time):
+    if temp_store(most_recent_counts, camera_id, camera_count, photo_time, img_id):
+        send_to_other_servers(servers, camera_id, camera_count, img_id)
         persist(camera_id, camera_count, photo_time, img_id)
     return jsonify(True)
 
@@ -26,15 +30,17 @@ def update_camera_value(camera_id, camera_count, photo_time, img_id):
 @handle_errors
 @require_json({'fb_id': str, 'fb_token': str, 'name': str, 'face_encodings_str': str})
 def update_user(fb_id, fb_token, name, face_encodings_str):
-    persist_user(fb_id, fb_token, name, face_encodings_str)
+    if persist_user(fb_id, fb_token, name, face_encodings_str):
+        broadcast_user(servers + face_classifiers, fb_id, fb_token, name, face_encodings_str)
     return jsonify(True)
 
 
 @app.route('/update_sighting', methods=['POST'])
 @handle_errors
-@require_json({'time': float, 'camera_id': int, 'fb_id': str})
+@require_json({'time': float, 'camera_id': int, 'fb_id': str, 'sighting_id': str})
 def update_sighting(time, camera_id, fb_id):
-    persist_sighting(time, camera_id, fb_id)
+    if persist_sighting(time, camera_id, fb_id):
+        broadcast_sighting(time, camera_id, fb_id)
     return jsonify(True)
 
 
@@ -106,7 +112,6 @@ def history():
 @app.route("/counts", methods=['GET'])
 @handle_errors
 def current_counts():
-    print most_recent_counts
     return jsonify(most_recent_counts)
 
 
@@ -151,9 +156,9 @@ def rooms_list():
 @handle_errors
 @require_json({'fb_id': str, 'fb_short_token': str})
 def fb_login(fb_id, fb_short_token):
+    print 'asdfasdfasdf'
     user = register_user(face_classifiers, fb_id, fb_short_token)
-    if user is not None:
-        persist_user(fb_user_id, user['fb_token'], user['name'], user['face_encodings_str'])
+    if user is not None and persist_user(fb_id, user['fb_token'], user['name'], user['face_encodings_str']):
         broadcast_user(
             servers + face_classifiers,
             user['fb_id'],

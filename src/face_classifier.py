@@ -85,7 +85,15 @@ def parse_face_encodings_str(s):
 @handle_errors
 @require_json({'fb_id': str, 'fb_short_token': str})
 def new_user(fb_id, fb_short_token):
-    # TODO: Check if user already exists
+    print 'Received POST to /new'
+    conn = sqlite3.connect(FC_DB)
+    c = conn.cursor()
+    c.execute("SELECT fb_id FROM users WHERE fb_id = ?", (fb_id,))
+    print 'Checking if user [{}] already exists...'.format(fb_id)
+    user = c.fetchone()
+    if user is not None:
+        return jsonify(None)
+
     # TODO: REMOVE THIS
     fb_long_token = fb_short_token
     # fb_long_token = fb_get_long_lived_token(fb_short_token)
