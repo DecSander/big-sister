@@ -6,7 +6,7 @@ import time
 from glob import glob
 import os
 from picamera import PiCamera
-from threading import Thread
+import traceback
 
 from cutility import bootup_camera
 from const import servers
@@ -15,21 +15,22 @@ from PIL import Image
 
 SERVER_URL = 'https://bigsister.info'
 server_urls = servers
-PERCENT_DIFFERENCE_THRESHOLD = 0.5
+PERCENT_DIFFERENCE_THRESHOLD = 0.3
 
 IMAGE_BANK_SIZE = 2**20 * 100
 IMAGE_FILE_DIR = "image_data/"
 PICTURE_FREQUENCY = 5 * 60
+
+SENT = 0
+NOT_SENT = 0
 
 def get_urls():
     bootup_camera(server_urls)
 
 
 
-class Camera(Thread):
-
+class Camera():
     def __init__(self, cam, room_label):
-        Thread.__init__(self)
         self.camera = cam
         self.room_label = room_label
         self.photo_time = None
@@ -61,9 +62,13 @@ class Camera(Thread):
             print r.text
         except Exception as e:
             print "failed to send image:", e
+            traceback.print_exc()
 
     def run(self):
+        global SENT, NOT_SENT
+        last_send = 0
         while True:
+            last_send = time.time()
             print "Taking picture..."
             self.take_picture()
             print(self.current_name, self.old_name)
@@ -76,12 +81,15 @@ class Camera(Thread):
                 self.send_image(same=False)
                 if self.old_name is not None:
                     os.remove(self.old_name)
+                SENT += 1
             else:
                 print "Image matches previous image; discarding"
                 os.remove(self.current_name)
                 self.current_name = self.old_name
                 self.send_image(same=True)
-            time.sleep(PICTURE_FREQUENCY)
+                NOT_SENT += 1
+            print "sent pct: {}".format(SENT / float(SENT + NOT_SENT))
+            time.sleep(max(PICTURE_FREQUENCY - (time.time() - last_send), 0))
 
 
 if __name__ == "__main__":
@@ -101,5 +109,5 @@ if __name__ == "__main__":
 
     print "Starting capture/thread loop"
     c = Camera(camera, args.room_label)
-    c.start()
+    c.run()
 
