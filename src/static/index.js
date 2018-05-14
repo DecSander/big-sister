@@ -156,6 +156,17 @@ function checkLoginState() {
   });
 }
 
+function changeGetButton() {
+  var date_selected = $('#date').val();
+  var time_selected = $('#time').val();
+  var epoch_selected = new Date(date_selected + ' ' + time_selected);
+  if (epoch_selected.getTime() > Date.now()) {
+    $('#predict').text('Get Prediction');
+  } else {
+    $('#predict').text('Get Past');
+  }
+}
+
 if (!checkedLoginStatus && typeof FB !== 'undefined') {
   checkedLoginStatus = true;
   checkLoginState();
