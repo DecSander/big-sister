@@ -226,8 +226,8 @@ def get_faces(imagefile, face_classifiers):
     return []
 
 
-def register_user(face_classifiers, fb_id, fb_short_token):
-    payload = {'fb_id': fb_id, 'fb_short_token': fb_short_token}
+def register_user(face_classifiers, fb_short_token):
+    payload = {'fb_short_token': fb_short_token}
     for fc in face_classifiers:
         try:
             print fc
